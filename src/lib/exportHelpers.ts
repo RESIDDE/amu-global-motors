@@ -1,4 +1,6 @@
 import { toast } from "sonner";
+import { getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
+import { getPrintFooterHTML } from "@/components/PrintFooter";
 
 export function exportToCSV(data: Record<string, any>[], filename: string) {
   if (data.length === 0) { toast.error("No data to export"); return; }
@@ -32,11 +34,14 @@ export function printTable(title: string, data: Record<string, any>[], columns: 
       th { background: #f5f5f5; font-weight: 600; }
       @media print { body { padding: 0; } }
     </style></head><body>
-    <h1>${title}</h1>
+    ${getPrintWatermarkHTML()}
+    ${getPrintHeaderHTML()}
+    <h1 style="text-align: center; margin-top: 20px;">${title}</h1>
     <table>
       <thead><tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr></thead>
       <tbody>${data.map((row) => `<tr>${columns.map((c) => `<td>${row[c.key] ?? "—"}</td>`).join("")}</tr>`).join("")}</tbody>
     </table>
+    ${getPrintFooterHTML()}
     </body></html>`;
   const win = window.open("", "_blank");
   if (win) { win.document.write(html); win.document.close(); win.print(); }

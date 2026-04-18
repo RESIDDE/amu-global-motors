@@ -157,12 +157,13 @@ export default function Dashboard() {
 
   // 6. Top Selling Makes
   const topMakes = useMemo(() => {
-     const makes = sales.reduce((acc, s) => {
-       const make = s.vehicles?.make || 'Unknown';
+     const makes = (sales || []).reduce((acc, s) => {
+       const make = (s as any).vehicles?.make || 'Unknown';
        acc[make] = (acc[make] || 0) + 1;
        return acc;
      }, {} as Record<string, number>);
-     return Object.entries(makes).sort((a,b) => b[1] - a[1]).slice(0, 4);
+     const entries = Object.entries(makes) as [string, number][];
+     return entries.sort((a, b) => b[1] - a[1]).slice(0, 4);
   }, [sales]);
 
   const filteredVehicles = vehicles
@@ -209,7 +210,7 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-4 md:gap-6 auto-rows-max">
 
           {/* MAIN KPI PANEL - 8 Cols */}
-          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 relative">
+          <div className="lg:col-span-8 grid grid-cols-1 md:grid-cols-5 gap-4 md:gap-6 relative">
             <Link to="/sales" className="md:col-span-2 group">
               <div className="bento-card h-full p-6 sm:p-8 flex flex-col justify-between overflow-hidden relative min-h-[160px]">
                 <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/20 blur-3xl rounded-full pointer-events-none group-hover:bg-primary/30 transition-colors duration-500"></div>
@@ -219,22 +220,44 @@ export default function Dashboard() {
                 </div>
                 <div className="mt-6 z-10 relative">
                   <p className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-1">Company Lifetime Revenue</p>
-                  <h2 className="text-4xl sm:text-5xl font-bold text-foreground tracking-tight">₦{totalRevenue.toLocaleString()}</h2>
+                  <h2 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-foreground tracking-tight truncate" title={`₦${totalRevenue.toLocaleString()}`}>₦{totalRevenue.toLocaleString()}</h2>
                 </div>
               </div>
             </Link>
 
-            <div className="bento-card p-6 flex flex-col justify-between relative overflow-hidden group">
-               <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-2xl rounded-full pointer-events-none transition-colors duration-500 group-hover:bg-amber-500/20" />
-               <div className="p-3 bg-amber-500/10 w-fit rounded-2xl mb-4 group-hover:bg-amber-500/20"><Clock className="h-6 w-6 text-amber-500" /></div>
-               <div>
-                  <h2 className="text-4xl font-bold text-foreground">{turnaroundWait} <span className="text-lg text-muted-foreground font-medium">days</span></h2>
-                  <p className="text-sm text-muted-foreground uppercase tracking-wider mt-1 font-semibold">Avg Repair Turnaround</p>
+            <Link to="/sales" className="md:col-span-1 group">
+               <div className="bento-card p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden h-full min-h-[160px]">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 blur-2xl rounded-full pointer-events-none transition-colors duration-500 group-hover:bg-violet-500/20" />
+                 <div className="p-2 sm:p-3 bg-violet-500/10 w-fit rounded-xl sm:rounded-2xl mb-2 sm:mb-4 group-hover:bg-violet-500/20"><DollarSign className="h-5 w-5 sm:h-6 sm:w-6 text-violet-500" /></div>
+                 <div className="z-10 relative">
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">₦{totalSalesRevenue >= 1000000 ? (totalSalesRevenue / 1000000).toFixed(1) + 'M' : totalSalesRevenue >= 1000 ? (totalSalesRevenue / 1000).toFixed(1) + 'k' : totalSalesRevenue}</h2>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mt-1 sm:mt-2 font-semibold line-clamp-1">Sales Rev.</p>
+                 </div>
+               </div>
+            </Link>
+
+            <Link to="/repairs" className="md:col-span-1 group">
+               <div className="bento-card p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden h-full min-h-[160px]">
+                 <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 blur-2xl rounded-full pointer-events-none transition-colors duration-500 group-hover:bg-amber-500/20" />
+                 <div className="p-2 sm:p-3 bg-amber-500/10 w-fit rounded-xl sm:rounded-2xl mb-2 sm:mb-4 group-hover:bg-amber-500/20"><Wrench className="h-5 w-5 sm:h-6 sm:w-6 text-amber-500" /></div>
+                 <div className="z-10 relative">
+                    <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">₦{totalRepairsRevenue >= 1000000 ? (totalRepairsRevenue / 1000000).toFixed(1) + 'M' : totalRepairsRevenue >= 1000 ? (totalRepairsRevenue / 1000).toFixed(1) + 'k' : totalRepairsRevenue}</h2>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mt-1 sm:mt-2 font-semibold line-clamp-1">Repairs Rev.</p>
+                 </div>
+               </div>
+            </Link>
+
+            <div className="md:col-span-1 bento-card p-5 sm:p-6 flex flex-col justify-between relative overflow-hidden group h-full min-h-[160px]">
+               <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 blur-2xl rounded-full pointer-events-none transition-colors duration-500 group-hover:bg-sky-500/20" />
+               <div className="p-2 sm:p-3 bg-sky-500/10 w-fit rounded-xl sm:rounded-2xl mb-2 sm:mb-4 group-hover:bg-sky-500/20"><Clock className="h-5 w-5 sm:h-6 sm:w-6 text-sky-500" /></div>
+               <div className="z-10 relative">
+                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">{turnaroundWait} <span className="text-sm sm:text-lg text-muted-foreground font-medium">days</span></h2>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground uppercase tracking-wider mt-1 sm:mt-2 font-semibold line-clamp-1">Avg Turnaround</p>
                </div>
             </div>
 
-            {/* MONTHLY REVENUE LINE CHART - 3 Cols */}
-            <div className="md:col-span-3 bento-card p-6 flex flex-col min-h-[350px]">
+            {/* MONTHLY REVENUE LINE CHART - 4 Cols */}
+            <div className="md:col-span-4 bento-card p-6 flex flex-col min-h-[350px]">
               <div className="mb-6 flex justify-between items-start">
                   <div>
                     <h3 className="font-semibold text-lg flex items-center gap-2"><BarChart3 className="w-4 h-4 text-emerald-500" /> Revenue Growth</h3>
@@ -271,8 +294,8 @@ export default function Dashboard() {
               </div>
             </div>
 
-            {/* Revenue Split - 1 Col */}
-            <div className="md:col-span-1 bento-card p-5 flex flex-col items-center min-h-[280px]">
+            {/* Revenue Split - 2 Cols */}
+            <div className="md:col-span-2 bento-card p-5 flex flex-col items-center min-h-[280px]">
               <h3 className="font-semibold text-sm self-start mb-0 w-full flex items-center gap-2"><PieChartIcon className="w-4 h-4" /> Split</h3>
               {revSplit.length > 0 ? (
                 <div className="w-full h-full min-h-[200px] flex items-center justify-center relative">
@@ -292,8 +315,8 @@ export default function Dashboard() {
               ) : <p className="text-sm text-muted-foreground mt-10">No data</p>}
             </div>
 
-            {/* Profit Margin - 3 Cols */}
-            <div className="md:col-span-3 bento-card p-6 flex flex-col min-h-[280px]">
+            {/* Profit Margin - 4 Cols */}
+            <div className="md:col-span-4 bento-card p-6 flex flex-col min-h-[280px]">
               <h3 className="font-semibold text-lg flex items-center gap-2 mb-1"><DollarSign className="w-4 h-4 text-emerald-500" /> Profit Margins</h3>
               <p className="text-sm text-muted-foreground mb-4">Cost vs Profit breakdown for recent sales</p>
               <div className="flex-1 w-full min-h-0">

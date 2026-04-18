@@ -14,20 +14,32 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Pencil, Trash2, MessageSquare, Car, Users } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, MessageSquare, Car, Users, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/useAuth";
+import { canEdit } from "@/lib/permissions";
 
 const statuses = ["Open", "In Progress", "Closed"];
 const emptyForm = { customer_id: "", vehicle_id: "", message: "", status: "Open" };
 
 export default function Inquiries() {
+  const { role } = useAuth();
+  const hasEdit = canEdit(role, "inquiries");
+
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 15;
   const queryClient = useQueryClient();
 
   const { data: inquiries = [], isLoading } = useQuery({
@@ -59,6 +71,17 @@ export default function Inquiries() {
 
   const vehicleMap = Object.fromEntries(vehicles.map((v) => [v.id, `${v.year} ${v.make} ${v.model}`]));
   const customerMap = Object.fromEntries(customers.map((c) => [c.id, c.name]));
+
+  const filtered = inquiries.filter((i) => {
+    const q = search.toLowerCase();
+    const cName = i.customer_id ? (customerMap[i.customer_id] || "").toLowerCase() : "";
+    const vName = i.vehicle_id ? (vehicleMap[i.vehicle_id] || "").toLowerCase() : "";
+    const msg = i.message.toLowerCase();
+    return !q || cName.includes(q) || vName.includes(q) || msg.includes(q);
+  });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
@@ -132,6 +155,20 @@ export default function Inquiries() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="glass-panel p-4 rounded-3xl flex flex-col sm:flex-row gap-4 items-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/5 to-transparent pointer-events-none" />
+        <div className="relative w-full group z-10">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-indigo-500 transition-colors" />
+          <Input 
+            placeholder="Search by customer, vehicle, or inquiry content..." 
+            value={search} 
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }} 
+            className="pl-10 h-10 rounded-xl bg-background/50 border-white/10 focus-visible:ring-indigo-500/50 transition-all font-medium text-sm w-full"
+          />
+        </div>
+      </div>
+
       {/* Main Content Area */}
       {isLoading ? (
         <div className="space-y-4">
@@ -147,56 +184,100 @@ export default function Inquiries() {
           <Button onClick={() => { setForm(emptyForm); setEditId(null); setDialogOpen(true); }} className="rounded-xl shadow-lg shadow-indigo-500/20 bg-indigo-500 hover:bg-indigo-600 text-white">Add Inquiry</Button>
         </div>
       ) : (
-        <div className="bento-card overflow-hidden">
-          <div className="overflow-x-auto w-full">
-            <Table className="w-full">
-              <TableHeader className="bg-foreground/5 pointer-events-none">
-                <TableRow className="border-border/50 hover:bg-transparent">
-                  <TableHead className="font-semibold px-6 py-4">Customer</TableHead>
-                  <TableHead className="font-semibold">Vehicle Interest</TableHead>
-                  <TableHead className="font-semibold">Message</TableHead>
-                  <TableHead className="font-semibold">Status</TableHead>
-                  <TableHead className="text-right font-semibold px-6">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {inquiries.map((i) => (
-                  <TableRow key={i.id} className="border-border/10 hover:bg-white/5 transition-colors group">
-                    <TableCell className="px-6 py-4">
-                       <div className="flex items-center gap-2">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span className="font-semibold text-sm transition-colors group-hover:text-indigo-500">{i.customer_id ? customerMap[i.customer_id] || "—" : "—"}</span>
-                       </div>
-                    </TableCell>
-                    <TableCell>
-                       <div className="flex items-center gap-2">
-                          {i.vehicle_id ? <Car className="h-4 w-4 text-muted-foreground" /> : null}
-                          <span className="text-sm">{i.vehicle_id ? vehicleMap[i.vehicle_id] || "—" : "—"}</span>
-                       </div>
-                    </TableCell>
-                    <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">{i.message}</TableCell>
-                    <TableCell>
-                      <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
-                        i.status === "Open" ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20" :
-                        i.status === "In Progress" ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
-                        "bg-muted/50 text-muted-foreground border border-white/5"
-                      }`}>{i.status}</span>
-                    </TableCell>
-                    <TableCell className="text-right px-6">
-                      <div className="flex justify-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <Button variant="ghost" size="icon" onClick={() => openEdit(i)} className="h-8 w-8 rounded-lg hover:bg-foreground/20">
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(i.id)} className="h-8 w-8 rounded-lg hover:bg-destructive/20 hover:text-destructive">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+        <div className="space-y-6">
+          <div className="bento-card overflow-hidden">
+            <div className="overflow-x-auto w-full">
+              <Table className="w-full">
+                <TableHeader className="bg-foreground/5 pointer-events-none">
+                  <TableRow className="border-border/50 hover:bg-transparent">
+                    <TableHead className="font-semibold px-6 py-4">Customer</TableHead>
+                    <TableHead className="font-semibold">Vehicle Interest</TableHead>
+                    <TableHead className="font-semibold">Message</TableHead>
+                    <TableHead className="font-semibold">Status</TableHead>
+                    <TableHead className="text-right font-semibold px-6">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paged.map((i) => (
+                    <TableRow key={i.id} className="border-border/10 hover:bg-white/5 transition-colors group">
+                      <TableCell className="px-6 py-4">
+                         <div className="flex items-center gap-2">
+                            <Users className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-semibold text-sm transition-colors group-hover:text-indigo-500">{i.customer_id ? customerMap[i.customer_id] || "—" : "—"}</span>
+                         </div>
+                      </TableCell>
+                      <TableCell>
+                         <div className="flex items-center gap-2">
+                            {i.vehicle_id ? <Car className="h-4 w-4 text-muted-foreground" /> : null}
+                            <span className="text-sm">{i.vehicle_id ? vehicleMap[i.vehicle_id] || "—" : "—"}</span>
+                         </div>
+                      </TableCell>
+                      <TableCell className="max-w-[300px] truncate text-sm text-muted-foreground">{i.message}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider ${
+                          i.status === "Open" ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20" :
+                          i.status === "In Progress" ? "bg-amber-500/10 text-amber-500 border border-amber-500/20" :
+                          "bg-muted/50 text-muted-foreground border border-white/5"
+                        }`}>{i.status}</span>
+                      </TableCell>
+                      <TableCell className="text-right px-6">
+                        <div className="flex justify-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                          {hasEdit && (
+                            <>
+                              <Button variant="ghost" size="icon" onClick={() => openEdit(i)} className="h-8 w-8 rounded-lg hover:bg-foreground/20">
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" onClick={() => setDeleteId(i.id)} className="h-8 w-8 rounded-lg hover:bg-destructive/20 hover:text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="p-6 border-t border-border/10">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => page > 0 && setPage(page - 1)}
+                      className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {[...Array(totalPages)].map((_, i) => (
+                    <PaginationItem key={i} className="hidden sm:block">
+                      <PaginationLink 
+                        isActive={page === i}
+                        onClick={() => setPage(i)}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => page < totalPages - 1 && setPage(page + 1)}
+                      className={page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              <div className="text-center mt-4 text-xs text-muted-foreground sm:hidden">
+                Page {page + 1} of {totalPages}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

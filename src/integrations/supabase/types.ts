@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      authority_to_sell: {
+        Row: {
+          id: string
+          created_at: string
+          agreement_date: string | null
+          customer_name: string
+          customer_address: string | null
+          customer_phone: string | null
+          customer_id_type: string | null
+          vehicle_make: string
+          vehicle_year_model: string | null
+          vehicle_color: string | null
+          vehicle_engine_number: string | null
+          vehicle_chassis: string | null
+          valid_until: string | null
+          note: string | null
+          signature: string | null
+          rep_name: string | null
+          rep_signature: string | null
+          rep_signature_date: string | null
+          created_by: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string
+          agreement_date?: string | null
+          customer_name: string
+          customer_address?: string | null
+          customer_phone?: string | null
+          customer_id_type?: string | null
+          vehicle_make: string
+          vehicle_year_model?: string | null
+          vehicle_color?: string | null
+          vehicle_engine_number?: string | null
+          vehicle_chassis?: string | null
+          valid_until?: string | null
+          note?: string | null
+          signature?: string | null
+          rep_name?: string | null
+          rep_signature?: string | null
+          rep_signature_date?: string | null
+          created_by?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string
+          agreement_date?: string | null
+          customer_name?: string
+          customer_address?: string | null
+          customer_phone?: string | null
+          customer_id_type?: string | null
+          vehicle_make?: string
+          vehicle_year_model?: string | null
+          vehicle_color?: string | null
+          vehicle_engine_number?: string | null
+          vehicle_chassis?: string | null
+          valid_until?: string | null
+          note?: string | null
+          signature?: string | null
+          rep_name?: string | null
+          rep_signature?: string | null
+          rep_signature_date?: string | null
+          created_by?: string | null
+        }
+        Relationships: []
+      }
+      audit_logs: {
+        Row: {
+          id: string
+          user_id: string | null
+          action: string
+          entity_type: string
+          entity_id: string | null
+          details: Json | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id?: string | null
+          action: string
+          entity_type: string
+          entity_id?: string | null
+          details?: Json | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string | null
+          action?: string
+          entity_type?: string
+          entity_id?: string | null
+          details?: Json | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["user_id"]
+          }
+        ]
+      }
       customers: {
         Row: {
           address: string | null
@@ -294,11 +398,15 @@ export type Database = {
           manual_make: string | null
           manual_model: string | null
           manual_year: string | null
-          model_year: number | null
+          notes: string | null
           payment_status: string | null
           payment_type: string | null
           repair_cost: number | null
           replacement_parts: string | null
+          rep_name: string | null
+          rep_signature: string | null
+          rep_signature_date: string | null
+          respray_notes: string | null
           signature_data: string | null
           to_be_resprayed: boolean
           unit: string | null
@@ -319,10 +427,15 @@ export type Database = {
           manual_model?: string | null
           manual_year?: string | null
           model_year?: number | null
+          notes?: string | null
           payment_status?: string | null
           payment_type?: string | null
           repair_cost?: number | null
           replacement_parts?: string | null
+          rep_name?: string | null
+          rep_signature?: string | null
+          rep_signature_date?: string | null
+          respray_notes?: string | null
           signature_data?: string | null
           to_be_resprayed?: boolean
           unit?: string | null
@@ -343,10 +456,15 @@ export type Database = {
           manual_model?: string | null
           manual_year?: string | null
           model_year?: number | null
+          notes?: string | null
           payment_status?: string | null
           payment_type?: string | null
           repair_cost?: number | null
           replacement_parts?: string | null
+          rep_name?: string | null
+          rep_signature?: string | null
+          rep_signature_date?: string | null
+          respray_notes?: string | null
           signature_data?: string | null
           to_be_resprayed?: boolean
           unit?: string | null
@@ -372,37 +490,58 @@ export type Database = {
       }
       sales: {
         Row: {
+          buyer_signature: string | null
+          buyer_signature_date: string | null
           created_at: string
           customer_id: string
           id: string
           notes: string | null
+          payment_status: string | null
+          payment_type: string | null
+          rep_name: string | null
+          rep_signature: string | null
+          rep_signature_date: string | null
           sale_date: string
           sale_price: number
           salesperson_id: string | null
           updated_at: string
-          vehicle_id: string
+          vehicle_id: string | null
         }
         Insert: {
+          buyer_signature?: string | null
+          buyer_signature_date?: string | null
           created_at?: string
           customer_id: string
           id?: string
           notes?: string | null
+          payment_status?: string | null
+          payment_type?: string | null
+          rep_name?: string | null
+          rep_signature?: string | null
+          rep_signature_date?: string | null
           sale_date?: string
           sale_price: number
           salesperson_id?: string | null
           updated_at?: string
-          vehicle_id: string
+          vehicle_id?: string | null
         }
         Update: {
+          buyer_signature?: string | null
+          buyer_signature_date?: string | null
           created_at?: string
           customer_id?: string
           id?: string
           notes?: string | null
+          payment_status?: string | null
+          payment_type?: string | null
+          rep_name?: string | null
+          rep_signature?: string | null
+          rep_signature_date?: string | null
           sale_date?: string
           sale_price?: number
           salesperson_id?: string | null
           updated_at?: string
-          vehicle_id?: string
+          vehicle_id?: string | null
         }
         Relationships: [
           {
@@ -414,6 +553,45 @@ export type Database = {
           },
           {
             foreignKeyName: "sales_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sale_vehicles: {
+        Row: {
+          created_at: string
+          id: string
+          price: number | null
+          sale_id: string | null
+          vehicle_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          price?: number | null
+          sale_id?: string | null
+          vehicle_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          price?: number | null
+          sale_id?: string | null
+          vehicle_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_vehicles_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_vehicles_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
             referencedRelation: "vehicles"

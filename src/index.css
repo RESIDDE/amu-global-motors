@@ -120,3 +120,54 @@
     @apply opacity-100;
   }
 }
+
+@media print {
+  /* Reset layout for physical paper */
+  body, html {
+    height: auto !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Unset the screen-locking heights we added for the app UI */
+  .h-screen {
+    height: auto !important;
+  }
+
+  /* Ensure the main content container expands fully */
+  main {
+    overflow: visible !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: block !important;
+  }
+
+  /* Hide the app shell UI during print */
+  header, 
+  aside,
+  .sidebar-trigger,
+  [data-sidebar="sidebar"],
+  .sidebar-provider {
+    display: none !important;
+  }
+
+  /* Remove rounding and borders from the layout wrapper during print */
+  .flex-1.flex-col {
+    all: unset !important;
+    display: block !important;
+  }
+
+  /* Page breaks and sizing */
+  @page {
+    margin: 1cm;
+    size: A4;
+  }
+
+  /* Force signatures and images to print colors if needed */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}
+

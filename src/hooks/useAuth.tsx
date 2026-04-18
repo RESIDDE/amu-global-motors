@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 type AuthState = {
   user: User | null;
   profile: any | null;
-  role: "admin" | "sales" | "mechanic" | null;
+  role: "super_admin" | "admin" | "sales" | "mechanic" | null;
   isLoading: boolean;
 };
 
@@ -27,54 +27,60 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     let mounted = true;
 
-    const fetchSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        if (error) throw error;
-        
-        if (session?.user) {
-          await loadUserExtras(session.user);
-        } else {
-          if (mounted) setState({ user: null, profile: null, role: null, isLoading: false });
-        }
-      } catch (error) {
-        console.error("Session error:", error);
-        if (mounted) setState({ user: null, profile: null, role: null, isLoading: false });
+    const setUserAndLoadExtras = (user: User) => {
+      if (mounted) {
+        setState((prev) => ({ ...prev, user }));
       }
+
+      Promise.all([
+        supabase.from("profiles").select("*").eq("user_id", user.id).single(),
+        (supabase as any).from("user_roles").select("role").eq("user_id", user.id).single(),
+      ])
+        .then(([{ data: profile }, { data: roleData }]) => {
+          if (mounted) {
+            setState((prev) => ({
+              ...prev,
+              profile: profile || null,
+              role: roleData?.role ?? "mechanic",
+              isLoading: false,
+            }));
+          }
+        })
+        .catch((err) => {
+          console.warn("Could not load profile/role extras:", err);
+          if (mounted) {
+            setState((prev) => ({ ...prev, isLoading: false, role: "mechanic" }));
+          }
+        });
     };
 
-    const loadUserExtras = async (user: User) => {
-      try {
-        const [{ data: profile }, { data: roleData }] = await Promise.all([
-          supabase.from("profiles").select("*").eq("user_id", user.id).single(),
-          (supabase as any).from("user_roles").select("role").eq("user_id", user.id).single(),
-        ]);
-        
-        if (mounted) {
-          setState({
-            user,
-            profile: profile || null,
-            role: roleData?.role || "mechanic",
-            isLoading: false,
-          });
-        }
-      } catch (error) {
-        console.error("Error loading user extras:", error);
-        if (mounted) setState({ user, profile: null, role: null, isLoading: false });
+
+    // ── 1. Resolve initial session ──────────────────────────────────────────
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (!mounted) return;
+      if (error) {
+        console.error("getSession error:", error);
+        setState({ user: null, profile: null, role: null, isLoading: false });
+        return;
       }
-    };
 
-    fetchSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Ignore INITIAL_SESSION as fetchSession() handles the initial load 
-      // preventing duplicate simultaneous database queries.
-      if (event === 'INITIAL_SESSION') return;
-      
       if (session?.user) {
-        await loadUserExtras(session.user);
+        setUserAndLoadExtras(session.user);
       } else {
-        if (mounted) setState({ user: null, profile: null, role: null, isLoading: false });
+        setState({ user: null, profile: null, role: null, isLoading: false });
+      }
+    });
+
+    // ── 2. React to subsequent auth events (login, logout, token refresh) ──
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (!mounted) return;
+      // INITIAL_SESSION is handled above via getSession() to avoid duplicate work
+      if (event === "INITIAL_SESSION") return;
+
+      if (session?.user) {
+        setUserAndLoadExtras(session.user);
+      } else {
+        setState({ user: null, profile: null, role: null, isLoading: false });
       }
     });
 

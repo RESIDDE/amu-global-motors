@@ -10,6 +10,9 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
@@ -20,10 +23,16 @@ import { Link } from "react-router-dom";
 import { PlusCircle, Search, Eye, Pencil, Trash2, Download, FileText, Printer, Car, ListFilter } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV, exportToJSON, printTable } from "@/lib/exportHelpers";
+import { useAuth } from "@/hooks/useAuth";
+import { canEdit } from "@/lib/permissions";
+import { logAction } from "@/lib/logger";
 
 const PAGE_SIZE = 20;
 
 export default function VehiclesList() {
+  const { role } = useAuth();
+  const hasEdit = canEdit(role, "vehicles");
+
   const [search, setSearch] = useState("");
   const [conditionFilter, setConditionFilter] = useState("all");
   const [page, setPage] = useState(0);
@@ -43,6 +52,7 @@ export default function VehiclesList() {
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("vehicles").delete().eq("id", id);
       if (error) throw error;
+      await logAction("DELETE", "Vehicle", id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["vehicles"] });
@@ -52,6 +62,9 @@ export default function VehiclesList() {
   });
 
   const filtered = vehicles.filter((v) => {
+    // Hide customer cars from the main sales fleet view
+    if (v.status === "Customer Car") return false;
+
     const q = search.toLowerCase();
     const matchesSearch = !q || v.make.toLowerCase().includes(q) || v.model.toLowerCase().includes(q) || (v.vin && v.vin.toLowerCase().includes(q)) || ((v as any).source_company && (v as any).source_company.toLowerCase().includes(q));
     const matchesCondition = conditionFilter === "all" || (v as any).condition === conditionFilter;
@@ -204,17 +217,21 @@ export default function VehiclesList() {
                     <TableCell className="text-xs text-muted-foreground">{(v as any).date_arrived ? new Date((v as any).date_arrived).toLocaleDateString() : "—"}</TableCell>
                     <TableCell>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold uppercase tracking-wider ${
-                        v.status.toLowerCase() === 'available' ? 'bg-emerald-500/10 text-emerald-500' : 
-                        v.status.toLowerCase() === 'sold' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'
+                        v.status?.toLowerCase() === 'available' ? 'bg-emerald-500/10 text-emerald-500' : 
+                        v.status?.toLowerCase() === 'sold' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'
                       }`}>
-                        {v.status}
+                        {v.status || "Unknown"}
                       </span>
                     </TableCell>
                     <TableCell className="text-right px-6">
                       <div className="flex justify-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
                         <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-primary/20 hover:text-primary"><Link to={`/vehicles/${v.id}`}><Eye className="h-4 w-4" /></Link></Button>
-                        <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-foreground/20"><Link to={`/vehicles/${v.id}/edit`}><Pencil className="h-4 w-4" /></Link></Button>
-                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(v.id)} className="h-8 w-8 rounded-lg hover:bg-destructive/20 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                        {hasEdit && (
+                          <>
+                            <Button variant="ghost" size="icon" asChild className="h-8 w-8 rounded-lg hover:bg-foreground/20"><Link to={`/vehicles/${v.id}/edit`}><Pencil className="h-4 w-4" /></Link></Button>
+                            <Button variant="ghost" size="icon" onClick={() => setDeleteId(v.id)} className="h-8 w-8 rounded-lg hover:bg-destructive/20 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                          </>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>
@@ -238,18 +255,22 @@ export default function VehiclesList() {
                      </div>
                   </div>
                   <span className={`shrink-0 inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold uppercase tracking-wider ${
-                    v.status.toLowerCase() === 'available' ? 'bg-emerald-500/10 text-emerald-500' : 
-                    v.status.toLowerCase() === 'sold' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'
+                    v.status?.toLowerCase() === 'available' ? 'bg-emerald-500/10 text-emerald-500' : 
+                    v.status?.toLowerCase() === 'sold' ? 'bg-blue-500/10 text-blue-500' : 'bg-amber-500/10 text-amber-500'
                   }`}>
-                    {v.status}
+                    {v.status || "Unknown"}
                   </span>
                 </div>
                 <div className="flex gap-2 pt-2 border-t border-border/10 justify-between items-center">
                   <span className="text-xs text-muted-foreground font-medium">{(v as any).condition || "Unknown Cond."}</span>
                   <div className="flex gap-1.5">
                     <Button variant="outline" size="sm" asChild className="h-8 text-xs rounded-lg border-white/10"><Link to={`/vehicles/${v.id}`}>View</Link></Button>
-                    <Button variant="outline" size="sm" asChild className="h-8 text-xs rounded-lg border-white/10"><Link to={`/vehicles/${v.id}/edit`}>Edit</Link></Button>
-                    <Button variant="ghost" size="icon" onClick={() => setDeleteId(v.id)} className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                    {hasEdit && (
+                      <>
+                        <Button variant="outline" size="sm" asChild className="h-8 text-xs rounded-lg border-white/10"><Link to={`/vehicles/${v.id}/edit`}>Edit</Link></Button>
+                        <Button variant="ghost" size="icon" onClick={() => setDeleteId(v.id)} className="h-8 w-8 rounded-lg text-destructive hover:bg-destructive/10 hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
@@ -258,12 +279,38 @@ export default function VehiclesList() {
 
           {/* Pagination */}
           {totalPages > 1 && (
-            <div className="p-4 border-t border-border/20 flex items-center justify-between bg-card/20">
-              <span className="text-sm font-medium text-muted-foreground hidden sm:inline-block">Page {page + 1} of {totalPages}</span>
-              <div className="flex gap-2 w-full sm:w-auto justify-between">
-                <Button variant="outline" size="sm" disabled={page === 0} onClick={() => setPage(page - 1)} className="rounded-xl border-white/10 bg-background/50">Previous</Button>
-                <span className="text-sm font-medium text-muted-foreground sm:hidden self-center">{page + 1} / {totalPages}</span>
-                <Button variant="outline" size="sm" disabled={page >= totalPages - 1} onClick={() => setPage(page + 1)} className="rounded-xl border-white/10 bg-background/50">Next</Button>
+            <div className="p-6 border-t border-border/10">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => page > 0 && setPage(page - 1)}
+                      className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {[...Array(totalPages)].map((_, i) => (
+                    <PaginationItem key={i} className="hidden sm:block">
+                      <PaginationLink 
+                        isActive={page === i}
+                        onClick={() => setPage(i)}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => page < totalPages - 1 && setPage(page + 1)}
+                      className={page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              <div className="text-center mt-4 text-xs text-muted-foreground sm:hidden">
+                Page {page + 1} of {totalPages}
               </div>
             </div>
           )}

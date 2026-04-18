@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Car, Wrench, FileText, Loader2, Phone } from "lucide-react";
 import { toast } from "sonner";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logo_old_backup.png";
 
 export default function CustomerPortal() {
   const [phone, setPhone] = useState("");
@@ -41,7 +41,7 @@ export default function CustomerPortal() {
       {/* Header */}
       <header className="p-6 border-b border-white/5 bg-background/50 backdrop-blur-xl z-10 flex items-center gap-4">
         <img src={logo} alt="BeeTee Autos" className="h-10 w-10 rounded-xl" />
-        <h1 className="text-xl font-heading font-bold tracking-tight">BeeTee Autos <span className="opacity-50">Portal</span></h1>
+        <h1 className="text-xl font-heading font-bold tracking-tight uppercase tracking-widest">BEETEE AUTOMOBILE <span className="opacity-50">Portal</span></h1>
       </header>
 
       <main className="flex-1 p-6 md:p-10 z-10 max-w-4xl w-full mx-auto animate-fade-up">

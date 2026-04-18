@@ -19,9 +19,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { toast } from "sonner";
 import { X, Upload } from "lucide-react";
 import VehicleMakeModelSelector from "@/components/VehicleMakeModelSelector";
+import { useAuth } from "@/hooks/useAuth";
+import { canEdit } from "@/lib/permissions";
+import { CurrencyInput } from "@/components/CurrencyInput";
+import { toast } from "sonner";
 
 interface FormData {
   make: string;
@@ -74,6 +77,15 @@ export default function VehicleForm() {
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
   const [existingImages, setExistingImages] = useState<{ id: string; image_url: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const { role } = useAuth();
+  const hasEdit = canEdit(role, "vehicles");
+
+  useEffect(() => {
+    if (isEdit && !hasEdit) {
+      toast.error("You do not have permission to edit existing vehicles.");
+      navigate("/vehicles");
+    }
+  }, [isEdit, hasEdit, navigate]);
 
   const { data: vehicle } = useQuery({
     queryKey: ["vehicle", id],
@@ -262,19 +274,28 @@ export default function VehicleForm() {
     key: keyof FormData,
     label: string,
     type: string = "text",
-    required = false
+    required = false,
+    currency = false
   ) => (
     <div className="space-y-1">
       <Label htmlFor={key}>
         {label}
         {required && <span className="text-destructive ml-1">*</span>}
       </Label>
-      <Input
-        id={key}
-        type={type}
-        value={form[key]}
-        onChange={(e) => setForm({ ...form, [key]: e.target.value })}
-      />
+      {currency ? (
+        <CurrencyInput
+          id={key}
+          value={form[key]}
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+        />
+      ) : (
+        <Input
+          id={key}
+          type={type}
+          value={form[key]}
+          onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+        />
+      )}
       {errors[key] && (
         <p className="text-sm text-destructive">{errors[key]}</p>
       )}
@@ -344,8 +365,8 @@ export default function VehicleForm() {
             <CardTitle>Pricing & Status</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 md:grid-cols-2">
-            {field("price", "Selling Price", "number")}
-            {field("cost_price", "Cost Price", "number")}
+            {field("price", "Selling Price", "text", false, true)}
+            {field("cost_price", "Cost Price", "text", false, true)}
 
             <div className="space-y-1">
               <Label>Status</Label>

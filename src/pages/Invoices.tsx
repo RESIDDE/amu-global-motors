@@ -14,17 +14,30 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
-import { PlusCircle, FileText, Printer, Trash2, Receipt } from "lucide-react";
+import { getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
+import { getPrintFooterHTML } from "@/components/PrintFooter";
+import {
+  Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
+} from "@/components/ui/pagination";
 import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { PlusCircle, FileText, Printer, Trash2, Receipt, Search } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { canEdit } from "@/lib/permissions";
 
 export default function Invoices() {
+  const { role } = useAuth();
+  const hasEdit = canEdit(role, "invoices");
+
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 12; // 3x4 grid
 
   const [form, setForm] = useState({
     customer_id: "",
@@ -101,6 +114,16 @@ export default function Invoices() {
   });
 
   const customerMap = Object.fromEntries(customers.map((c) => [c.id, c]));
+
+  const filtered = invoices.filter((inv) => {
+    const q = search.toLowerCase();
+    const invNum = inv.invoice_number.toLowerCase();
+    const custName = (customerMap[inv.customer_id]?.name || "").toLowerCase();
+    return !q || invNum.includes(q) || custName.includes(q);
+  });
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const createInvoice = useMutation({
     mutationFn: async () => {
@@ -198,8 +221,10 @@ export default function Invoices() {
       .status-paid { background: #e8f5e9; color: #2e7d32; }
       @media print { body { padding: 20px; } }
     </style></head><body>
+    ${getPrintWatermarkHTML()}
+    ${getPrintHeaderHTML()}
     <div class="header">
-      <div class="company"><h1>Beetee Autos</h1><p>Professional Auto Sales & Services</p></div>
+      <div class="company"></div>
       <div class="invoice-info"><h2>INVOICE</h2><p>${inv.invoice_number}</p><p>Date: ${new Date(inv.created_at).toLocaleDateString()}</p>
       ${inv.due_date ? `<p>Due: ${new Date(inv.due_date).toLocaleDateString()}</p>` : ""}
       <p><span class="status ${inv.status === "paid" ? "status-paid" : "status-draft"}">${inv.status.toUpperCase()}</span></p></div>
@@ -220,6 +245,7 @@ export default function Invoices() {
       <div class="row total-row"><span>Total Due:</span><span>₦${Number(inv.total).toLocaleString()}</span></div>
     </div>
     <div class="footer"><p>Thank you for your business!</p><p>Beetee Autos — Professional Auto Sales & Services</p></div>
+    ${getPrintFooterHTML()}
     </body></html>`;
     const win = window.open("", "_blank");
     if (win) { win.document.write(html); win.document.close(); win.print(); }
@@ -251,6 +277,20 @@ export default function Invoices() {
         </div>
       </div>
 
+      {/* Search Bar */}
+      <div className="glass-panel p-4 rounded-3xl flex flex-col sm:flex-row gap-4 items-center relative overflow-hidden">
+        <div className="absolute inset-0 bg-gradient-to-r from-cyan-500/5 to-transparent pointer-events-none" />
+        <div className="relative w-full group z-10">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-cyan-500 transition-colors" />
+          <Input 
+            placeholder="Search by invoice number or customer name..." 
+            value={search} 
+            onChange={(e) => { setSearch(e.target.value); setPage(0); }} 
+            className="pl-10 h-10 rounded-xl bg-background/50 border-white/10 focus-visible:ring-cyan-500/50 transition-all font-medium text-sm w-full"
+          />
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
            {[1, 2, 3].map((n) => <div key={n} className="h-32 rounded-3xl bg-card/40 animate-pulse border border-white/5" />)}
@@ -265,53 +305,95 @@ export default function Invoices() {
              <Button onClick={() => setDialogOpen(true)} className="rounded-xl shadow-lg shadow-cyan-500/20 bg-cyan-500 hover:bg-cyan-600 text-white">Create Invoice</Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {invoices.map((inv) => {
-            const linkedCount = invoiceRepairLinks.filter((l) => l.invoice_id === inv.id).length;
-            return (
-              <div key={inv.id} className="bento-card p-6 flex flex-col justify-between group">
-                <div>
-                  <div className="flex items-start justify-between mb-4">
-                    <div className="bg-foreground/5 p-3 rounded-2xl group-hover:bg-cyan-500/10 transition-colors shrink-0">
-                      <FileText className="h-5 w-5 text-foreground/70 group-hover:text-cyan-500 transition-colors" />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {paged.map((inv) => {
+              const linkedCount = invoiceRepairLinks.filter((l) => l.invoice_id === inv.id).length;
+              return (
+                <div key={inv.id} className="bento-card p-6 flex flex-col justify-between group">
+                  <div>
+                    <div className="flex items-start justify-between mb-4">
+                      <div className="bg-foreground/5 p-3 rounded-2xl group-hover:bg-cyan-500/10 transition-colors shrink-0">
+                        <FileText className="h-5 w-5 text-foreground/70 group-hover:text-cyan-500 transition-colors" />
+                      </div>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
+                          inv.status === "paid" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                        }`}>
+                        {inv.status}
+                      </span>
                     </div>
-                    <span className={`inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider border ${
-                        inv.status === "paid" ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                      }`}>
-                      {inv.status}
-                    </span>
-                  </div>
-                  
-                  <h3 className="font-bold text-lg text-foreground group-hover:text-cyan-500 transition-colors truncate">
-                    {inv.invoice_number}
-                  </h3>
-                  
-                  <div className="mt-2 space-y-1">
-                    <p className="text-sm font-medium text-muted-foreground truncate">{customerMap[inv.customer_id]?.name || "Unknown Customer"}</p>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-foreground/60 capitalize bg-foreground/5 px-2 py-1 rounded-lg">{inv.invoice_type}</span>
-                      {linkedCount > 0 && <span className="text-xs text-foreground/60 bg-foreground/5 px-2 py-1 rounded-lg">{linkedCount} repair(s)</span>}
+                    
+                    <h3 className="font-bold text-lg text-foreground group-hover:text-cyan-500 transition-colors truncate">
+                      {inv.invoice_number}
+                    </h3>
+                    
+                    <div className="mt-2 space-y-1">
+                      <p className="text-sm font-medium text-muted-foreground truncate">{customerMap[inv.customer_id]?.name || "Unknown Customer"}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-foreground/60 capitalize bg-foreground/5 px-2 py-1 rounded-lg">{inv.invoice_type}</span>
+                        {linkedCount > 0 && <span className="text-xs text-foreground/60 bg-foreground/5 px-2 py-1 rounded-lg">{linkedCount} repair(s)</span>}
+                      </div>
+                    </div>
+                    
+                    <div className="mt-4">
+                      <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
+                        ₦{Number(inv.total).toLocaleString()}
+                      </p>
                     </div>
                   </div>
-                  
-                  <div className="mt-4">
-                    <p className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/70">
-                      ₦{Number(inv.total).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
 
-                <div className="flex gap-2 mt-6 pt-4 border-t border-white/5 justify-end">
-                  <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-cyan-500/10 hover:text-cyan-500 text-muted-foreground transition-all" onClick={() => printInvoice(inv)}>
-                    <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all" onClick={() => setDeleteId(inv.id)}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex gap-2 mt-6 pt-4 border-t border-white/5 justify-end">
+                    <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-cyan-500/10 hover:text-cyan-500 text-muted-foreground transition-all" onClick={() => printInvoice(inv)}>
+                      <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
+                    </Button>
+                    {hasEdit && (
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all" onClick={() => setDeleteId(inv.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="glass-panel p-6 rounded-3xl border border-white/5">
+              <Pagination>
+                <PaginationContent>
+                  <PaginationItem>
+                    <PaginationPrevious 
+                      onClick={() => page > 0 && setPage(page - 1)}
+                      className={page === 0 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                  
+                  {[...Array(totalPages)].map((_, i) => (
+                    <PaginationItem key={i} className="hidden sm:block">
+                      <PaginationLink 
+                        isActive={page === i}
+                        onClick={() => setPage(i)}
+                        className="cursor-pointer"
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+
+                  <PaginationItem>
+                    <PaginationNext 
+                      onClick={() => page < totalPages - 1 && setPage(page + 1)}
+                      className={page >= totalPages - 1 ? "pointer-events-none opacity-50" : "cursor-pointer"}
+                    />
+                  </PaginationItem>
+                </PaginationContent>
+              </Pagination>
+              <div className="text-center mt-4 text-xs text-muted-foreground sm:hidden">
+                Page {page + 1} of {totalPages}
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
       )}
 
