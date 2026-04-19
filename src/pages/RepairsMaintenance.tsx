@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { 
-  ChevronRight, ArrowRight, Receipt, ClipboardCheck, Wrench, PlusCircle, Clock, DollarSign, PieChart as PieChartIcon, Search, Car, Pencil, QrCode, FileOutput, Trash2, History as HistoryIcon, Download 
+  ChevronRight, ArrowRight, Receipt, ClipboardCheck, Wrench, PlusCircle, Clock, DollarSign, PieChart as PieChartIcon, Search, Car, Pencil, QrCode, FileOutput, Trash2, History as HistoryIcon, Download,
+  Printer, FileText
 } from "lucide-react";
 import { triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
 import {
