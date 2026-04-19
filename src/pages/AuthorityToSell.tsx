@@ -7,7 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad } from "@/components/SignaturePad";
-import { Printer, FileText, CheckCircle2, History, Search, Calendar as CalendarIcon, ArrowLeft, Trash2, PlusCircle, Users, Car, Pencil, Download } from "lucide-react";
+import { 
+  Printer, FileText, CheckCircle2, History, Search, Calendar as CalendarIcon, 
+  ArrowLeft, Trash2, PlusCircle, Users, Car, Pencil, Download, 
+  ChevronRight, ChevronLeft, ShieldCheck, FileCheck, Info, Clock, AlertTriangle
+} from "lucide-react";
 import { downloadAsPNG } from "@/lib/exportHelpers";
 import {
   DropdownMenu,
@@ -23,6 +27,8 @@ import { PrintFooter, getPrintFooterHTML } from "@/components/PrintFooter";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 import { triggerPrint } from "@/lib/exportHelpers";
+import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 
 type ATS = {
   id: string;
@@ -66,6 +72,7 @@ const EMPTY_FORM = {
 export default function AuthorityToSell() {
   const [activeTab, setActiveTab] = useState("create");
   const [mode, setMode] = useState<"edit" | "preview">("edit");
+  const [currentStep, setCurrentStep] = useState(1);
   const documentRef = useRef<HTMLDivElement>(null);
   const { user, role } = useAuth();
   const hasEdit = canEdit(role, "authority-to-sell");
@@ -214,8 +221,25 @@ export default function AuthorityToSell() {
     });
   }, [history, search, dateFilter]);
 
+  const stats = useMemo(() => {
+    const total = history.length;
+    const thisMonth = history.filter(item => {
+      const d = new Date(item.agreement_date);
+      const now = new Date();
+      return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+    }).length;
+    const expiringSoon = history.filter(item => {
+      if (!item.valid_until) return false;
+      const d = new Date(item.valid_until);
+      const now = new Date();
+      const diff = (d.getTime() - now.getTime()) / (1000 * 3600 * 24);
+      return diff > 0 && diff <= 30;
+    }).length;
+    return { total, thisMonth, expiringSoon };
+  }, [history]);
+
   // ── Handlers ──────────────────────────────────────────────────────────────
-  const handlePreview = async () => {
+  const handleSave = async () => {
     if (!signature) {
       toast.warning("Please capture the owner's signature before saving.");
       return;
@@ -249,7 +273,7 @@ export default function AuthorityToSell() {
       await saveMutation.mutateAsync(payload);
       setMode("preview");
     } catch (e) {
-      // Error handled by mutation's onError
+      // Error handled by mutation
     }
   };
 
@@ -296,6 +320,7 @@ export default function AuthorityToSell() {
     setRepSignature(item.rep_signature || "");
     setEditingId(item.id);
     setMode("edit");
+    setCurrentStep(1);
     setActiveTab("create");
   };
 
@@ -304,512 +329,490 @@ export default function AuthorityToSell() {
     setSignature("");
     setRepSignature("");
     setEditingId(null);
+    setCurrentStep(1);
   };
 
-  // ── Helper ────────────────────────────────────────────────────────────────
+  // ── Helper Component ──────────────────────────────────────────────────────
   const Field = ({ label, value }: { label: string; value: string }) => (
     <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 py-2 sm:py-1 border-b border-gray-200">
       <span className="font-bold text-[13px] sm:text-sm text-gray-800 shrink-0">{label}:</span>
       <span className="flex-1 text-[13px] sm:text-sm text-gray-900 font-medium break-words leading-relaxed">
-        {value || <span className="text-transparent select-none">{"_".repeat(20)}</span>}
+        {value || <span className="text-transparent select-none">{"_".repeat(15)}</span>}
       </span>
     </div>
   );
 
+  const DocumentPreview = () => (
+    <div className="w-full bg-white text-black p-6 sm:p-10 shadow-2xl rounded-2xl border border-border/5 overflow-hidden relative">
+      <div className="absolute top-0 right-0 p-4 opacity-5 print:hidden">
+        <ShieldCheck className="w-40 h-40" />
+      </div>
+      <PrintWatermark />
+      <PrintHeader />
+      <div className="text-center my-6">
+        <h1 className="text-xl font-black text-black uppercase tracking-widest underline underline-offset-4">
+          Authority to Sell Vehicle
+        </h1>
+      </div>
+      <div className="flex items-baseline gap-2 mb-6 border-b border-gray-300 pb-1">
+        <span className="font-bold text-sm">Date:</span>
+        <span className="text-sm font-medium flex-1">
+          {formData.agreementDate ? new Date(formData.agreementDate).toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' }) : ""}
+        </span>
+      </div>
+
+      <section className="mb-6">
+        <h2 className="font-black text-sm uppercase tracking-wide mb-1 flex items-center gap-2"><Users className="w-3 h-3" /> Owner's Information</h2>
+        <div className="space-y-1">
+          <Field label="Full Name" value={formData.customerName} />
+          <Field label="Address" value={formData.customerAddress} />
+          <Field label="Contact Number" value={formData.customerPhone} />
+          <Field label="Valid ID Type & Number" value={formData.customerIdType} />
+        </div>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="font-black text-sm uppercase tracking-wide mb-1 flex items-center gap-2"><Car className="w-3 h-3" /> Vehicle Information</h2>
+        <div className="space-y-1">
+          <Field label="Make/Brand" value={formData.vehicleMake} />
+          <Field label="Year Model" value={formData.vehicleYearModel} />
+          <Field label="Color" value={formData.vehicleColor} />
+          <Field label="Engine Number" value={formData.vehicleEngineNumber} />
+          <Field label="Chassis Number" value={formData.vehicleChassis} />
+        </div>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="font-black text-sm uppercase tracking-wide mb-3 flex items-center gap-2"><FileCheck className="w-3 h-3" /> Authority Given</h2>
+        <p className="text-[13px] leading-[2] text-gray-800">
+          I, <span className="inline-block min-w-[150px] border-b border-gray-800 text-center font-bold px-2">{formData.customerName || "____________________"}</span>, 
+          hereby authorize the above-named person to sell the vehicle described above on my behalf. This includes: 
+          Talking to potential buyers, accepting payment, signing necessary sale documents, Releasing the vehicle and its documents.
+        </p>
+        <div className="flex items-baseline gap-2 mt-3 border-b border-gray-300 pb-1">
+          <span className="font-bold text-xs whitespace-nowrap">Valid until:</span>
+          <span className="text-[13px] font-medium flex-1">
+            {formData.validUntil ? new Date(formData.validUntil).toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' }) : ""}
+          </span>
+        </div>
+      </section>
+
+      <section className="mb-6">
+        <h2 className="font-black text-sm uppercase tracking-wide mb-2">Note:</h2>
+        <p className="text-[13px] text-gray-800 italic border-b border-gray-300 pb-2 min-h-[30px]">
+          {formData.note || "No additional notes provided."}
+        </p>
+      </section>
+
+      <section className="grid grid-cols-2 gap-8">
+        <div>
+          <p className="text-[11px] font-bold text-gray-600 mb-1">Owner's Signature:</p>
+          <div className="h-16 border-b border-gray-800 mb-1 flex items-end">
+            {signature && <img src={signature} alt="Owner" className="max-h-14 object-contain" />}
+          </div>
+          <p className="text-[11px] font-medium truncate">{formData.customerName}</p>
+        </div>
+        <div>
+          <p className="text-[11px] font-bold text-gray-600 mb-1">Representative Signature:</p>
+          <div className="h-16 border-b border-gray-800 mb-1 flex items-end">
+            {repSignature && <img src={repSignature} alt="Rep" className="max-h-14 object-contain" />}
+          </div>
+          <p className="text-[11px] font-medium truncate">{formData.repName}</p>
+        </div>
+      </section>
+      <PrintFooter />
+    </div>
+  );
+
   // ══════════════════════════════════════════════════════════════
-  //  PREVIEW / PRINT MODE
+  //  PREVIEW MODE
   // ══════════════════════════════════════════════════════════════
   if (mode === "preview") {
     return (
-      <div className="animate-fade-up max-w-4xl mx-auto pb-12 px-2 sm:px-4 print:p-0 print:m-0">
-        {/* Toolbar */}
-        <div className="flex items-center justify-between mb-6 print:hidden">
-          <Button variant="outline" onClick={() => setMode("edit")} className="rounded-xl gap-2 font-medium">
+      <div className="animate-fade-up max-w-5xl mx-auto pb-12 px-4 print:p-0 print:m-0">
+        <div className="flex items-center justify-between mb-8 print:hidden">
+          <Button variant="ghost" onClick={() => setMode("edit")} className="rounded-xl gap-2 hover:bg-background/80">
             <ArrowLeft className="w-4 h-4" /> Back to Editor
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button className="rounded-xl gap-2 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20 font-semibold px-6">
-                <Download className="w-4 h-4" /> Download
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
-              <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer">
-                <Printer className="mr-2 h-4 w-4 text-sky-500" /> Print / PDF
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => downloadAsPNG(getATSHTML(formData, signature, repSignature), `ats_${formData.customerName.replace(/\s+/g, '_')}`)}
-                className="rounded-lg cursor-pointer"
-              >
-                <Download className="mr-2 h-4 w-4 text-sky-500" /> Download PNG
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex gap-3">
+             <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button className="rounded-xl gap-2 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20 font-semibold px-6">
+                  <Download className="w-4 h-4" /> Export Options
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
+                <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer">
+                  <Printer className="mr-2 h-4 w-4 text-sky-500" /> Print Document (PDF)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => downloadAsPNG(getATSHTML(formData, signature, repSignature), `ats_${formData.customerName.replace(/\s+/g, '_')}`)}
+                  className="rounded-lg cursor-pointer"
+                >
+                  <Download className="mr-2 h-4 w-4 text-sky-500" /> Download as Image
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
 
-        {/* Printable Document Container with Scaling for small screens */}
-        <div className="w-full overflow-hidden flex justify-center">
-          <div
-            ref={documentRef}
-            className="bg-white text-black rounded-xl sm:rounded-3xl shadow-2xl border border-gray-100 print:shadow-none print:border-none print:rounded-none overflow-hidden h-auto sm:min-h-[1056px] p-6 sm:p-14 w-full max-w-full sm:w-auto"
-          >
-            <PrintWatermark />
-            <PrintHeader />
-
-            {/* Title */}
-            <div className="text-center my-6">
-              <h1 className="text-xl font-black text-black uppercase tracking-widest underline underline-offset-4">
-                Authority to Sell Vehicle
-              </h1>
-            </div>
-
-            {/* Date */}
-            <div className="flex items-baseline gap-2 mb-8 border-b border-gray-300 pb-1">
-              <span className="font-bold text-sm">Date:</span>
-              <span className="text-sm font-medium flex-1">
-                {formData.agreementDate
-                  ? new Date(formData.agreementDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-                  : ""}
-              </span>
-            </div>
-
-            {/* Owner's Information */}
-            <section className="mb-8">
-              <h2 className="font-black text-sm uppercase tracking-wide mb-1">Owner's Information</h2>
-              <div className="space-y-1">
-                <Field label="Full Name" value={formData.customerName} />
-                <Field label="Address" value={formData.customerAddress} />
-                <Field label="Contact Number" value={formData.customerPhone} />
-                <Field label="Valid ID Type & Number" value={formData.customerIdType} />
-              </div>
-            </section>
-
-            {/* Vehicle Information */}
-            <section className="mb-8">
-              <h2 className="font-black text-sm uppercase tracking-wide mb-1">Vehicle Information</h2>
-              <div className="space-y-1">
-                <Field label="Make/Brand" value={formData.vehicleMake} />
-                <Field label="Year Model" value={formData.vehicleYearModel} />
-                <Field label="Color" value={formData.vehicleColor} />
-                <Field label="Engine Number" value={formData.vehicleEngineNumber} />
-                <Field label="Chassis Number" value={formData.vehicleChassis} />
-              </div>
-            </section>
-
-            {/* Authority Given */}
-            <section className="mb-8">
-              <h2 className="font-black text-sm uppercase tracking-wide mb-3">Authority Given</h2>
-              <p className="text-sm leading-[2.2] text-gray-800">
-                I,{" "}
-                <span className="inline-block min-w-[220px] border-b border-gray-800 text-center font-bold">
-                  {formData.customerName || ""}
-                </span>
-                , hereby authorize the above-named person to sell the vehicle described above on my behalf. This includes:
-                <br />
-                Talking to potential buyers, accepting payment, signing necessary sale documents, Releasing the vehicle and its documents.
-              </p>
-              <div className="flex items-baseline gap-2 mt-3 border-b border-gray-300 pb-1">
-                <span className="font-bold text-sm whitespace-nowrap">This authority is valid until:</span>
-                <span className="text-sm font-medium flex-1">
-                  {formData.validUntil
-                    ? new Date(formData.validUntil).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-                    : ""}
-                </span>
-              </div>
-              <div className="border-b border-gray-400 mt-4" />
-            </section>
-
-            {/* Note */}
-            <section className="mb-6">
-              <h2 className="font-black text-sm uppercase tracking-wide mb-2">Note:</h2>
-              <p className="text-sm text-gray-800 leading-relaxed min-h-[40px] border-b border-gray-300 pb-2">
-                {formData.note}
-              </p>
-            </section>
-
-            {/* Signatures */}
-            <section>
-              <h2 className="font-black text-sm uppercase tracking-wide mb-6">Signatures</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
-                {/* Owner */}
-                <div>
-                  <p className="text-xs font-bold text-gray-600 mb-1">Owner's Signature:</p>
-                  <div className="h-20 border-b border-gray-800 mb-2 flex items-end">
-                    {signature && (
-                      <img src={signature} alt="Owner Signature" className="max-h-16 object-contain" />
-                    )}
-                  </div>
-                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1 mb-2">
-                    <span className="text-xs font-bold">Name:</span>
-                    <span className="text-xs font-medium flex-1">{formData.customerName}</span>
-                  </div>
-                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1">
-                    <span className="text-xs font-bold">Date:</span>
-                    <span className="text-xs font-medium flex-1">
-                      {formData.agreementDate
-                        ? new Date(formData.agreementDate).toLocaleDateString("en-GB")
-                        : ""}
-                    </span>
-                  </div>
-                </div>
-
-                {/* BEE TEE Rep */}
-                <div>
-                  <p className="text-xs font-bold text-gray-600 mb-1">BEE TEE Representatives Signature:</p>
-                  <div className="h-20 border-b border-gray-800 mb-2 flex items-end">
-                    {repSignature && (
-                      <img src={repSignature} alt="Rep Signature" className="max-h-16 object-contain" />
-                    )}
-                  </div>
-                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1 mb-2">
-                    <span className="text-xs font-bold">Name:</span>
-                    <span className="text-xs font-medium flex-1">{formData.repName}</span>
-                  </div>
-                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1">
-                    <span className="text-xs font-bold">Date:</span>
-                    <span className="text-xs font-medium flex-1">
-                      {formData.repSignatureDate
-                        ? new Date(formData.repSignatureDate).toLocaleDateString("en-GB")
-                        : ""}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </section>
-            <PrintFooter />
-          </div>
+        <div className="max-w-4xl mx-auto" ref={documentRef}>
+          <DocumentPreview />
         </div>
       </div>
     );
   }
 
   // ══════════════════════════════════════════════════════════════
-  //  FORM / MANAGEMENT MODE
+  //  MAIN UI
   // ══════════════════════════════════════════════════════════════
   return (
-    <div className="max-w-6xl mx-auto animate-fade-up pb-10 px-4 sm:px-0">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row items-start justify-between gap-6 mb-8">
+    <div className="max-w-7xl mx-auto pb-10 px-4 sm:px-6 animate-fade-up">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-6 mb-10">
         <div>
           <div className="flex items-center gap-2 mb-2 opacity-70">
-            <FileText className="w-4 h-4 text-sky-500" />
-            <span className="text-xs font-bold uppercase tracking-widest text-sky-500">Legal Documents</span>
+            <div className="p-1.5 bg-sky-500/10 rounded-lg"><ShieldCheck className="w-4 h-4 text-sky-500" /></div>
+            <span className="text-xs font-bold uppercase tracking-widest text-sky-500">Legal Management</span>
           </div>
           <h1 className="text-4xl md:text-5xl font-heading font-black text-foreground tracking-tight">Authority to Sell</h1>
           <p className="text-muted-foreground mt-2 text-base max-w-lg">
-            Create, manage, and search Bee Tee Automobile authorization agreements.
+            Create professional legal authorization documents for vehicle sales in minutes.
           </p>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="bg-card/40 border border-white/5 p-1 rounded-2xl">
-          <TabsTrigger value="create" className="rounded-xl px-6 font-semibold data-[state=active]:bg-sky-500 data-[state=active]:text-white transition-all">
-            <PlusCircle className="w-4 h-4 mr-2" /> Create Document
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
+        <TabsList className="bg-card/40 border border-white/10 p-1.5 rounded-2xl w-fit">
+          <TabsTrigger value="create" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-sky-500/20 transition-all">
+            <PlusCircle className="w-4 h-4 mr-2" /> {editingId ? "Edit Agreement" : "New Agreement"}
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-xl px-6 font-semibold data-[state=active]:bg-sky-500 data-[state=active]:text-white transition-all">
-            <History className="w-4 h-4 mr-2" /> Agreement History
+          <TabsTrigger value="history" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-sky-500/20 transition-all">
+            <History className="w-4 h-4 mr-2" /> Past Agreements
           </TabsTrigger>
         </TabsList>
 
-        {/* ── CREATE TAB ────────────────────────────────────────────── */}
-        <TabsContent value="create">
-          <div className="space-y-6">
-            <Card className="bento-card overflow-hidden">
-              <CardHeader className="bg-sky-500/5 border-b border-white/5 pb-4">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-sky-500" /> Document Details
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-8 space-y-10">
-
-                {/* Agreement Date */}
-                <div className="space-y-2 max-w-xs">
-                  <Label className="text-muted-foreground text-xs font-semibold px-1">AGREEMENT DATE</Label>
-                  <Input name="agreementDate" type="date" value={formData.agreementDate} onChange={handleChange} className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                </div>
-
-                <div className="h-px bg-white/5" />
-
-                {/* Owner's Information */}
-                <div className="space-y-5">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-sky-500 flex items-center gap-3">
-                    <Users className="w-4 h-4" /> Owner's Information
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">FULL NAME</Label>
-                      <Input name="customerName" value={formData.customerName} onChange={handleChange} placeholder="e.g. John Adeyemi" className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2 sm:col-span-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">ADDRESS</Label>
-                      <Input name="customerAddress" value={formData.customerAddress} onChange={handleChange} placeholder="Full residential address..." className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">CONTACT NUMBER</Label>
-                      <Input name="customerPhone" value={formData.customerPhone} onChange={handleChange} placeholder="0807..." className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">VALID ID TYPE & NUMBER</Label>
-                      <Input name="customerIdType" value={formData.customerIdType} onChange={handleChange} placeholder="NIN / Intl. Passport / Driver's License..." className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-white/5" />
-
-                {/* Vehicle Information */}
-                <div className="space-y-5">
-                  <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-sky-500 flex items-center gap-3">
-                    <Car className="w-4 h-4" /> Vehicle Information
-                  </h3>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">MAKE / BRAND</Label>
-                      <Input name="vehicleMake" value={formData.vehicleMake} onChange={handleChange} placeholder="e.g. Toyota" className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">YEAR MODEL</Label>
-                      <Input name="vehicleYearModel" value={formData.vehicleYearModel} onChange={handleChange} placeholder="e.g. Camry 2021" className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">COLOR</Label>
-                      <Input name="vehicleColor" value={formData.vehicleColor} onChange={handleChange} placeholder="e.g. Pearl White" className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">ENGINE NUMBER</Label>
-                      <Input name="vehicleEngineNumber" value={formData.vehicleEngineNumber} onChange={handleChange} placeholder="Engine No." className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">CHASSIS NUMBER</Label>
-                      <Input name="vehicleChassis" value={formData.vehicleChassis} onChange={handleChange} placeholder="Chassis / VIN No." className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label className="text-muted-foreground text-xs font-semibold px-1">AUTHORITY VALID UNTIL</Label>
-                      <Input name="validUntil" type="date" value={formData.validUntil} onChange={handleChange} className="h-12 bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl" />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="h-px bg-white/5" />
-
-                {/* Note */}
-                <div className="space-y-3">
-                  <Label className="text-muted-foreground text-xs font-semibold px-1">NOTE (OPTIONAL)</Label>
-                  <Textarea
-                    name="note"
-                    value={formData.note}
-                    onChange={handleChange}
-                    placeholder="Any additional terms or conditions..."
-                    className="bg-background/50 border-white/10 focus-visible:ring-sky-500 rounded-xl min-h-[80px]"
-                  />
-                </div>
-
-                <div className="h-px bg-white/5" />
-                
-                {/* Signatures */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  {/* Owner Signature */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-sky-500 flex items-center justify-between">
-                      <span className="flex items-center gap-3">
-                        <Pencil className="w-4 h-4" /> Owner's Signature
-                      </span>
-                      {signature && (
-                        <span className="text-[10px] text-emerald-500 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1 rounded-full">
-                          <CheckCircle2 className="w-3 h-3" /> CAPTURED
-                        </span>
-                      )}
-                    </h3>
-                    <div className="bg-card/40 p-4 rounded-2xl border border-white/5 shadow-inner">
-                      <SignaturePad value={signature} onChange={setSignature} />
-                      <p className="text-[10px] text-muted-foreground text-center mt-3 uppercase font-bold tracking-tighter opacity-50">
-                        Have the owner draw their signature above.
-                      </p>
-                    </div>
-                  </div>
-
-                  {/* Representative Signature */}
-                  <div className="space-y-4">
-                    <h3 className="text-xs font-bold uppercase tracking-[0.2em] text-sky-500 flex items-center justify-between">
-                      <span className="flex items-center gap-3">
-                        <Pencil className="w-4 h-4" /> Rep. Signature
-                      </span>
-                      {repSignature && (
-                        <span className="text-[10px] text-emerald-500 flex items-center gap-1.5 bg-emerald-500/10 px-3 py-1 rounded-full">
-                          <CheckCircle2 className="w-3 h-3" /> CAPTURED
-                        </span>
-                      )}
-                    </h3>
-                    <div className="bg-card/40 p-4 rounded-2xl border border-white/5 shadow-inner">
-                      <SignaturePad value={repSignature} onChange={setRepSignature} />
-                      <div className="grid grid-cols-1 gap-3 mt-4">
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-muted-foreground font-bold uppercase px-1">Rep. Name</Label>
-                          <Input name="repName" value={formData.repName} onChange={handleChange} placeholder="Full Name" className="h-9 text-sm bg-background/50 border-white/10 rounded-lg" />
-                        </div>
-                        <div className="space-y-1">
-                          <Label className="text-[10px] text-muted-foreground font-bold uppercase px-1">Sign Date</Label>
-                          <Input name="repSignatureDate" type="date" value={formData.repSignatureDate} onChange={handleChange} className="h-9 text-sm bg-background/50 border-white/10 rounded-lg" />
-                        </div>
+        <TabsContent value="create" className="focus-visible:outline-none">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Form Column */}
+            <div className="lg:col-span-7 space-y-6">
+              <Card className="bento-card border-white/10 overflow-hidden shadow-2xl">
+                <div className="p-8 border-b border-white/5 bg-foreground/5">
+                   <div className="flex justify-between items-center mb-6">
+                      <div className="space-y-1">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                           {currentStep === 1 && <><Car className="w-5 h-5 text-sky-500" /> Vehicle Identification</>}
+                           {currentStep === 2 && <><Users className="w-5 h-5 text-sky-500" /> Owner Details</>}
+                           {currentStep === 3 && <><FileCheck className="w-5 h-5 text-sky-500" /> Execution & Signatures</>}
+                        </h2>
+                        <p className="text-xs text-muted-foreground font-medium uppercase tracking-wider">Step {currentStep} of 3</p>
                       </div>
-                    </div>
-                  </div>
+                      <div className="w-24">
+                        <Progress value={(currentStep / 3) * 100} className="h-1.5 bg-sky-500/10" />
+                      </div>
+                   </div>
+
+                   <div className="flex gap-2">
+                      {[1, 2, 3].map(s => (
+                        <div 
+                          key={s} 
+                          className={cn(
+                            "h-1.5 flex-1 rounded-full transition-all duration-500",
+                            currentStep >= s ? "bg-sky-500" : "bg-white/5"
+                          )} 
+                        />
+                      ))}
+                   </div>
                 </div>
 
-              </CardContent>
-            </Card>
+                <CardContent className="p-8">
+                   {/* Step 1: Vehicle */}
+                   {currentStep === 1 && (
+                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Make / Brand</Label>
+                            <Input name="vehicleMake" value={formData.vehicleMake} onChange={handleChange} placeholder="e.g. Mercedes-Benz" className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Model & Year</Label>
+                            <Input name="vehicleYearModel" value={formData.vehicleYearModel} onChange={handleChange} placeholder="e.g. G63 AMG 2023" className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Exterior Color</Label>
+                            <Input name="vehicleColor" value={formData.vehicleColor} onChange={handleChange} placeholder="e.g. Obsidian Black" className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Engine Number</Label>
+                            <Input name="vehicleEngineNumber" value={formData.vehicleEngineNumber} onChange={handleChange} placeholder="Enter Engine No." className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                          <div className="sm:col-span-2 space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Chassis / VIN Number</Label>
+                            <Input name="vehicleChassis" value={formData.vehicleChassis} onChange={handleChange} placeholder="Enter Chassis No." className="h-12 bg-background/50 border-white/10 rounded-xl px-4 font-mono" />
+                          </div>
+                        </div>
+                     </div>
+                   )}
 
-            <div className="flex justify-end gap-4">
-              <Button variant="outline" size="lg" className="rounded-2xl px-10 h-14 border-white/10 hover:bg-white/5 transition-all" onClick={clearForm}>
-                Clear Form
-              </Button>
-              <Button
-                size="lg"
-                className="rounded-2xl px-12 h-14 bg-sky-500 hover:bg-sky-600 text-white shadow-xl shadow-sky-500/25 font-bold transition-all disabled:opacity-50"
-                disabled={!formData.customerName || !formData.vehicleMake || !signature || !repSignature || saveMutation.isPending}
-                onClick={handlePreview}
-              >
-                {saveMutation.isPending ? "Saving..." : "Save & Preview Document"}
-              </Button>
+                   {/* Step 2: Owner */}
+                   {currentStep === 2 && (
+                     <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="grid grid-cols-1 gap-6">
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Owner's Full Name</Label>
+                            <Input name="customerName" value={formData.customerName} onChange={handleChange} placeholder="Full Legal Name" className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Contact Phone</Label>
+                            <Input name="customerPhone" value={formData.customerPhone} onChange={handleChange} placeholder="e.g. 080..." className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Residential Address</Label>
+                            <Input name="customerAddress" value={formData.customerAddress} onChange={handleChange} placeholder="Current Address" className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Identity Document (Type & ID)</Label>
+                            <Input name="customerIdType" value={formData.customerIdType} onChange={handleChange} placeholder="e.g. NIN: 123456789" className="h-12 bg-background/50 border-white/10 rounded-xl px-4" />
+                          </div>
+                        </div>
+                     </div>
+                   )}
+
+                   {/* Step 3: Sign */}
+                   {currentStep === 3 && (
+                     <div className="space-y-8 animate-in fade-in slide-in-from-right-4 duration-500">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pb-6 border-b border-white/5">
+                           <div className="space-y-2">
+                             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Agreement Date</Label>
+                             <Input name="agreementDate" type="date" value={formData.agreementDate} onChange={handleChange} className="h-12 bg-background/50 border-white/10 rounded-xl" />
+                           </div>
+                           <div className="space-y-2">
+                             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Valid Until</Label>
+                             <Input name="validUntil" type="date" value={formData.validUntil} onChange={handleChange} className="h-12 bg-background/50 border-white/10 rounded-xl" />
+                           </div>
+                        </div>
+
+                        <div className="space-y-8">
+                           {/* Owner Sign */}
+                           <div className="space-y-4">
+                              <div className="flex justify-between items-center">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-sky-500">Owner Signature Capture</Label>
+                                {signature && <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full font-bold flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3" /> READY</span>}
+                              </div>
+                              <div className="bg-card/40 p-3 rounded-2xl border border-white/5">
+                                <SignaturePad value={signature} onChange={setSignature} />
+                              </div>
+                           </div>
+
+                           {/* Rep Sign */}
+                           <div className="space-y-4 pt-4 border-t border-white/5">
+                              <div className="flex justify-between items-center">
+                                <Label className="text-xs font-bold uppercase tracking-wider text-sky-500">Representative Signature</Label>
+                                {repSignature && <span className="text-[10px] bg-emerald-500/10 text-emerald-500 px-3 py-1 rounded-full font-bold flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3" /> READY</span>}
+                              </div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start">
+                                 <div className="bg-card/40 p-3 rounded-2xl border border-white/5">
+                                    <SignaturePad value={repSignature} onChange={setRepSignature} />
+                                 </div>
+                                 <div className="space-y-4">
+                                    <div className="space-y-2">
+                                       <Label className="text-[10px] uppercase font-bold text-muted-foreground">Rep. Name</Label>
+                                       <Input name="repName" value={formData.repName} onChange={handleChange} className="bg-background/50 border-white/10 h-10 rounded-xl" />
+                                    </div>
+                                    <div className="space-y-2">
+                                       <Label className="text-[10px] uppercase font-bold text-muted-foreground">Sign Date</Label>
+                                       <Input name="repSignatureDate" type="date" value={formData.repSignatureDate} onChange={handleChange} className="bg-background/50 border-white/10 h-10 rounded-xl" />
+                                    </div>
+                                 </div>
+                              </div>
+                           </div>
+                        </div>
+
+                        <div className="space-y-2">
+                           <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Additional Terms / Notes</Label>
+                           <Textarea name="note" value={formData.note} onChange={handleChange} placeholder="Any specific conditions or instructions..." className="bg-background/50 border-white/10 rounded-xl min-h-[100px]" />
+                        </div>
+                     </div>
+                   )}
+                </CardContent>
+
+                <div className="p-8 border-t border-white/5 bg-foreground/5 flex justify-between items-center">
+                    <Button 
+                      variant="ghost" 
+                      onClick={() => currentStep > 1 ? setCurrentStep(currentStep - 1) : clearForm()} 
+                      className="rounded-xl h-12 px-6 gap-2"
+                    >
+                      {currentStep > 1 ? <><ChevronLeft className="w-4 h-4" /> Back</> : "Clear Form"}
+                    </Button>
+                    
+                    {currentStep < 3 ? (
+                      <Button 
+                        onClick={() => setCurrentStep(currentStep + 1)} 
+                        className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl h-12 px-8 gap-2 font-bold shadow-lg shadow-sky-500/20"
+                      >
+                        Continue <ChevronRight className="w-4 h-4" />
+                      </Button>
+                    ) : (
+                      <Button 
+                        onClick={handleSave} 
+                        disabled={!formData.customerName || !signature || !repSignature || saveMutation.isPending}
+                        className="bg-sky-500 hover:bg-sky-600 text-white rounded-xl h-12 px-10 font-bold shadow-lg shadow-sky-500/20"
+                      >
+                        {saveMutation.isPending ? "Generating..." : "Save & View Document"}
+                      </Button>
+                    )}
+                </div>
+              </Card>Card
+            </div>
+
+            {/* Preview Column (Hidden on Mobile) */}
+            <div className="lg:col-span-5 sticky top-28 hidden lg:block">
+               <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-sky-500/20 to-violet-500/20 rounded-3xl blur opacity-75 transition duration-1000 group-hover:duration-200" />
+                  <div className="relative transform scale-[0.8] origin-top bg-white rounded-3xl overflow-hidden shadow-2xl">
+                     <div className="absolute inset-0 bg-gray-50 flex items-center justify-center -z-1 opacity-50">
+                        <span className="text-6xl font-black text-gray-200 -rotate-45 select-none">DRAFT PREVIEW</span>
+                     </div>
+                     <DocumentPreview />
+                  </div>
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-sky-500 text-white px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-xl flex items-center gap-2">
+                     <Clock className="w-3 h-3" /> Real-time Preview 
+                  </div>
+               </div>
+               
+               <div className="mt-8 glass-panel p-5 rounded-2xl border border-white/5 space-y-3">
+                  <div className="flex items-center gap-2 text-sky-500 mb-1">
+                     <Info className="w-4 h-4" />
+                     <h4 className="text-xs font-bold uppercase tracking-widest">Document Tips</h4>
+                  </div>
+                  <ul className="space-y-2">
+                     <li className="flex gap-2 text-[11px] text-muted-foreground leading-relaxed">
+                        <div className="w-1.5 h-1.5 rounded-full bg-sky-500/50 mt-1 shrink-0" />
+                        Ensure the customer's full residential address is captured for legal validity.
+                     </li>
+                     <li className="flex gap-2 text-[11px] text-muted-foreground leading-relaxed">
+                        <div className="w-1.5 h-1.5 rounded-full bg-sky-500/50 mt-1 shrink-0" />
+                        Capture clear signatures to avoid disputes during vehicle release.
+                     </li>
+                  </ul>
+               </div>
             </div>
           </div>
         </TabsContent>
 
-        {/* ── HISTORY TAB ──────────────────────────────────────────── */}
         <TabsContent value="history">
-          <div className="space-y-6">
-            {/* Filters */}
-            <div className="glass-panel p-6 rounded-3xl flex flex-col md:flex-row gap-4 items-center relative overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-sky-500/5 to-transparent pointer-events-none" />
-              <div className="relative w-full group">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground group-focus-within:text-sky-500 transition-colors" />
-                <Input
-                  placeholder="Search by owner name, vehicle make, or chassis number..."
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  className="pl-12 h-14 rounded-2xl bg-background/50 border-white/10 focus-visible:ring-sky-500/50 font-medium text-base w-full shadow-inner"
-                />
-              </div>
-              <div className="relative group flex-shrink-0 w-full md:w-52">
-                <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+          <div className="space-y-8">
+            {/* Quick Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <div className="bento-card p-6 flex flex-col justify-between">
+                  <div className="p-2 bg-sky-500/10 rounded-xl w-fit"><FileText className="w-5 h-5 text-sky-500" /></div>
+                  <div className="mt-4">
+                     <h3 className="text-3xl font-black">{stats.total}</h3>
+                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Total Agreements</p>
+                  </div>
+               </div>
+               <div className="bento-card p-6 flex flex-col justify-between">
+                  <div className="p-2 bg-emerald-500/10 rounded-xl w-fit"><CheckCircle2 className="w-5 h-5 text-emerald-500" /></div>
+                  <div className="mt-4">
+                     <h3 className="text-3xl font-black">{stats.thisMonth}</h3>
+                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1">Created This Month</p>
+                  </div>
+               </div>
+               <div className="bento-card p-6 flex flex-col justify-between group overflow-hidden relative">
+                  <div className="p-2 bg-amber-500/10 rounded-xl w-fit"><Clock className="w-5 h-5 text-amber-500" /></div>
+                  <div className="mt-4">
+                     <h3 className="text-3xl font-black">{stats.expiringSoon}</h3>
+                     <p className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground mt-1 flex items-center gap-1.5">
+                       Expiring Soon 
+                       {stats.expiringSoon > 0 && <AlertTriangle className="w-3 h-3 text-amber-500 animate-pulse" />}
+                     </p>
+                  </div>
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-110 transition-transform">
+                     <AlertTriangle className="w-24 h-24" />
+                  </div>
+               </div>
+            </div>
+
+            {/* History Table */}
+            <div className="space-y-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-1 group">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground group-focus-within:text-sky-500 transition-colors" />
+                  <Input
+                    placeholder="Search agreements..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-12 h-14 rounded-2xl bg-background/50 border-white/10 focus-visible:ring-sky-500/50 text-base"
+                  />
+                </div>
                 <Input
                   type="date"
                   value={dateFilter}
                   onChange={(e) => setDateFilter(e.target.value)}
-                  className="pl-11 h-14 rounded-2xl bg-background/50 border-white/10 focus-visible:ring-sky-500/50 text-sm shadow-inner"
+                  className="h-14 rounded-2xl bg-background/50 border-white/10 w-full md:w-56"
                 />
               </div>
-            </div>
 
-            {/* Table */}
-            <div className="bento-card overflow-hidden">
-              <div className="overflow-x-auto w-full">
-                <div className="min-w-[800px]">
-                  <Table>
-                  <TableHeader className="bg-foreground/5">
-                    <TableRow className="border-white/5 hover:bg-transparent">
-                      <TableHead className="font-bold uppercase tracking-widest text-[10px] py-6 px-6">Date</TableHead>
-                      <TableHead className="font-bold uppercase tracking-widest text-[10px]">Owner</TableHead>
-                      <TableHead className="font-bold uppercase tracking-widest text-[10px]">Vehicle</TableHead>
-                      <TableHead className="font-bold uppercase tracking-widest text-[10px]">Chassis No.</TableHead>
-                      <TableHead className="text-right font-bold uppercase tracking-widest text-[10px] px-6">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {isLoading ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-20 text-muted-foreground animate-pulse font-medium">
-                          Loading agreements...
-                        </TableCell>
+              <div className="bento-card overflow-hidden">
+                <div className="overflow-x-auto">
+                   <Table>
+                    <TableHeader className="bg-foreground/5">
+                      <TableRow className="border-border/50 hover:bg-transparent">
+                        <TableHead className="font-bold uppercase tracking-widest text-[10px] py-6 px-6">Owner</TableHead>
+                        <TableHead className="font-bold uppercase tracking-widest text-[10px]">Vehicle</TableHead>
+                        <TableHead className="font-bold uppercase tracking-widest text-[10px]">Agreement Date</TableHead>
+                        <TableHead className="text-right font-bold uppercase tracking-widest text-[10px] px-6">Manage</TableHead>
                       </TableRow>
-                    ) : filteredHistory.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-20 text-muted-foreground font-medium">
-                          No agreements found. Create your first document above.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredHistory.map((item) => (
-                        <TableRow key={item.id} className="border-white/5 hover:bg-white/5 transition-all group">
-                          <TableCell className="py-5 px-6 font-medium">
-                            {new Date(item.agreement_date).toLocaleDateString("en-GB")}
-                          </TableCell>
-                          <TableCell className="font-bold text-foreground/90">{item.customer_name}</TableCell>
-                          <TableCell>
-                            <span className="font-semibold text-sm">
-                              {item.vehicle_make} — {item.vehicle_year_model}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground font-mono text-xs">
-                            {item.vehicle_chassis || "—"}
-                          </TableCell>
-                          <TableCell className="text-right px-6">
-                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    className="h-10 rounded-xl hover:bg-sky-500/10 hover:text-sky-500 font-bold px-4"
-                                  >
-                                    <Download className="w-4 h-4 mr-2" /> Download
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
-                                  <DropdownMenuItem onClick={() => viewHistoryItem(item)} className="rounded-lg cursor-pointer">
-                                    <Printer className="mr-2 h-4 w-4 text-sky-500" /> View & Print (PDF)
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem 
-                                    onClick={() => downloadAsPNG(getATSHTML({
-                                      agreementDate: item.agreement_date,
-                                      customerName: item.customer_name,
-                                      customerAddress: item.customer_address,
-                                      customerPhone: item.customer_phone,
-                                      customerIdType: item.customer_id_type,
-                                      vehicleMake: item.vehicle_make,
-                                      vehicleYearModel: item.vehicle_year_model,
-                                      vehicleColor: item.vehicle_color,
-                                      vehicleEngineNumber: item.vehicle_engine_number,
-                                      vehicleChassis: item.vehicle_chassis,
-                                      validUntil: item.valid_until,
-                                      note: item.note,
-                                      repName: item.rep_name,
-                                      repSignatureDate: item.rep_signature_date
-                                    }, item.signature, item.rep_signature), `ats_${item.customer_name.replace(/\s+/g, '_')}`)}
-                                    className="rounded-lg cursor-pointer"
-                                  >
-                                    <Download className="mr-2 h-4 w-4 text-sky-500" /> Download PNG
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                              {hasEdit && (
-                                <>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleEdit(item)}
-                                    className="h-10 rounded-xl hover:bg-sky-500/10 hover:text-sky-500 font-bold px-4"
-                                  >
-                                    <Pencil className="w-4 h-4 mr-2" /> Edit
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => deleteMutation.mutate(item.id)}
-                                    className="h-10 w-10 rounded-xl hover:bg-destructive/10 hover:text-destructive text-muted-foreground transition-all"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </Button>
-                                </>
-                              )}
-                            </div>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredHistory.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center py-20 text-muted-foreground font-medium italic">
+                            No matching agreements found.
                           </TableCell>
                         </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+                      ) : (
+                        filteredHistory.map((item) => (
+                          <TableRow key={item.id} className="border-border/10 hover:bg-white/5 group transition-colors">
+                            <TableCell className="px-6 py-5">
+                               <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 rounded-full bg-sky-500/10 flex items-center justify-center text-sky-500">
+                                     <Users className="w-4 h-4" />
+                                  </div>
+                                  <div>
+                                     <p className="font-bold text-foreground leading-none mb-1">{item.customer_name}</p>
+                                     <p className="text-[10px] text-muted-foreground font-medium">{item.customer_phone}</p>
+                                  </div>
+                               </div>
+                            </TableCell>
+                            <TableCell>
+                               <div className="flex items-center gap-3">
+                                  <Car className="w-4 h-4 text-muted-foreground" />
+                                  <span className="font-semibold text-sm">{item.vehicle_make} {item.vehicle_year_model}</span>
+                               </div>
+                            </TableCell>
+                            <TableCell className="text-sm font-medium">
+                               {new Date(item.agreement_date).toLocaleDateString("en-GB", { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </TableCell>
+                            <TableCell className="text-right px-6">
+                               <div className="flex justify-end gap-2">
+                                  <Button variant="ghost" size="icon" onClick={() => viewHistoryItem(item)} className="h-9 w-9 rounded-xl hover:bg-sky-500/20 hover:text-sky-500">
+                                     <Printer className="w-4 h-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" onClick={() => handleEdit(item)} className="h-9 w-9 rounded-xl hover:bg-sky-500/20 hover:text-sky-500">
+                                     <Pencil className="w-4 h-4" />
+                                  </Button>
+                                  {hasEdit && (
+                                    <Button variant="ghost" size="icon" onClick={() => deleteMutation.mutate(item.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/20 hover:text-destructive">
+                                       <Trash2 className="w-4 h-4" />
+                                    </Button>
+                                  )}
+                               </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                   </Table>
                 </div>
               </div>
             </div>
