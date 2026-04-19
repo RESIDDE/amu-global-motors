@@ -28,7 +28,6 @@ const ALL_NAV_ITEMS: NavItem[] = [
   { title: "Invoices",     url: "/invoices",          pageKey: "invoices",         icon: FileText },
   { title: "Inquiries",    url: "/inquiries",         pageKey: "inquiries",        icon: MessageSquare },
   { title: "Inspections",  url: "/inspections",       pageKey: "inspections",      icon: ClipboardCheck },
-  { title: "Repairs",      url: "/repairs",           pageKey: "repairs",          icon: Wrench },
   { title: "Auth. Form",   url: "/authority-to-sell", pageKey: "authority-to-sell", icon: FileSignature },
 ];
 

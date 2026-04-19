@@ -247,7 +247,7 @@ export default function Settings() {
   const savePerms = () => { savePermissions(permissions); setPermDirty(false); toast.success("Permissions saved"); };
   const resetPerms = () => { resetPermissions(); setPermissions({ ...DEFAULT_PERMISSIONS }); setPermDirty(false); toast.success("Permissions reset to defaults"); };
 
-  const configurableRoles: Exclude<AppRole, "super_admin">[] = ["admin", "sales", "mechanic"];
+  const configurableRoles: Exclude<AppRole, "super_admin">[] = ["admin", "sales"];
   const otherUsers = usersData.filter((u: any) => u.user_id !== user?.id);
 
   return (
@@ -364,7 +364,6 @@ export default function Settings() {
                         <SelectItem value="super_admin" className="rounded-lg font-bold text-amber-400">⭐ Super Admin</SelectItem>
                         <SelectItem value="admin" className="rounded-lg font-bold text-emerald-500">Admin</SelectItem>
                         <SelectItem value="sales" className="rounded-lg text-blue-400">Sales</SelectItem>
-                        <SelectItem value="mechanic" className="rounded-lg text-violet-400">Mechanic</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -562,7 +561,6 @@ export default function Settings() {
                 <SelectContent className="glass-panel rounded-xl">
                   <SelectItem value="admin" className="rounded-lg text-emerald-500 font-bold">Admin</SelectItem>
                   <SelectItem value="sales" className="rounded-lg text-blue-400">Sales</SelectItem>
-                  <SelectItem value="mechanic" className="rounded-lg text-violet-400">Mechanic</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -622,7 +620,6 @@ export default function Settings() {
                 <SelectContent className="glass-panel rounded-xl">
                   <SelectItem value="admin" className="rounded-lg text-emerald-500 font-bold">Admin</SelectItem>
                   <SelectItem value="sales" className="rounded-lg text-blue-400">Sales</SelectItem>
-                  <SelectItem value="mechanic" className="rounded-lg text-violet-400">Mechanic</SelectItem>
                 </SelectContent>
               </Select>
             </div>

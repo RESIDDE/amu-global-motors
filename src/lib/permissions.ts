@@ -10,7 +10,6 @@ export type PageKey =
   | "invoices"
   | "inquiries"
   | "inspections"
-  | "repairs"
   | "authority-to-sell";
 
 export const ALL_PAGES: { key: PageKey; label: string; path: string }[] = [
@@ -21,7 +20,6 @@ export const ALL_PAGES: { key: PageKey; label: string; path: string }[] = [
   { key: "invoices",         label: "Invoices",          path: "/invoices" },
   { key: "inquiries",        label: "Inquiries",         path: "/inquiries" },
   { key: "inspections",      label: "Inspections",       path: "/inspections" },
-  { key: "repairs",          label: "Repairs",           path: "/repairs" },
   { key: "authority-to-sell", label: "Auth. Form",       path: "/authority-to-sell" },
 ];
 
@@ -31,7 +29,7 @@ export const SUPER_ADMIN_PAGES: PageKey[] = ALL_PAGES.map((p) => p.key);
 export const DEFAULT_PERMISSIONS: PermissionsMap = {
   admin:    { view: ALL_PAGES.map((p) => p.key), edit: ALL_PAGES.map((p) => p.key) },
   sales:    { view: ["dashboard", "vehicles", "customers", "sales", "invoices", "inquiries"], edit: ["vehicles", "customers", "sales", "invoices", "inquiries"] },
-  mechanic: { view: ["dashboard", "vehicles", "repairs", "inspections"], edit: ["vehicles", "repairs", "inspections"] },
+  mechanic: { view: ["dashboard", "vehicles", "inspections"], edit: ["vehicles", "inspections"] },
 };
 
 // ─── localStorage persistence ────────────────────────────────────────────────
