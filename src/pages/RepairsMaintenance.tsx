@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { 
   ChevronRight, ArrowRight, Receipt, ClipboardCheck, Wrench, PlusCircle, Clock, DollarSign, PieChart as PieChartIcon, Search, Car, Pencil, QrCode, FileOutput, Trash2, History as HistoryIcon, Download 
 } from "lucide-react";
-import { triggerPrint, downloadAsPNG } from "@/lib/exportHelpers";
+import { triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -861,16 +861,23 @@ export default function RepairsMaintenance() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
                         <DropdownMenuItem onClick={() => triggerPrint(getJobCardHTML(r))} className="rounded-lg cursor-pointer">
-                          <ClipboardCheck className="mr-2 h-4 w-4 text-sky-500" /> Job Card (PDF)
+                          <Printer className="mr-2 h-4 w-4 text-sky-500" /> Print Job Card (Dialog)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => downloadAsPDF(getJobCardHTML(r), `job_card_${r.job_card_no || r.id}`)} className="rounded-lg cursor-pointer">
+                          <FileText className="mr-2 h-4 w-4 text-sky-500" /> Download Job Card (Direct)
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => downloadAsPNG(getJobCardHTML(r), `job_card_${r.job_card_no || r.id}`)} className="rounded-lg cursor-pointer">
-                          <Download className="mr-2 h-4 w-4 text-sky-500" /> Job Card (PNG)
+                          <Download className="mr-2 h-4 w-4 text-sky-500" /> Download Job Card (PNG)
                         </DropdownMenuItem>
+                        
                         <DropdownMenuItem onClick={() => triggerPrint(getBillHTML(r))} className="rounded-lg cursor-pointer border-t border-white/5 mt-1 pt-2">
-                          <Receipt className="mr-2 h-4 w-4 text-emerald-500" /> Repair Bill (PDF)
+                          <Printer className="mr-2 h-4 w-4 text-emerald-500" /> Print Table Bill (Dialog)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => downloadAsPDF(getBillHTML(r), `bill_${r.job_card_no || r.id}`)} className="rounded-lg cursor-pointer">
+                          <FileText className="mr-2 h-4 w-4 text-emerald-500" /> Download Bill (Direct)
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => downloadAsPNG(getBillHTML(r), `bill_${r.job_card_no || r.id}`)} className="rounded-lg cursor-pointer">
-                          <Download className="mr-2 h-4 w-4 text-emerald-500" /> Repair Bill (PNG)
+                          <Download className="mr-2 h-4 w-4 text-emerald-500" /> Download Bill (PNG)
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

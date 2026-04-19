@@ -94,7 +94,7 @@ export default function Settings() {
       if (profilesError) throw profilesError;
       return roles.map((r: any) => ({
         ...r,
-        profile: profiles.find((p: any) => p.user_id === r.user_id) || null,
+        profile: profiles.find((p: any) => p.id === r.user_id) || null,
       }));
     },
   });
@@ -168,9 +168,9 @@ export default function Settings() {
 
       // Create profile
       await (supabase as any).from("profiles").upsert({
-        user_id: newUserId,
+        id: newUserId,
         display_name: inviteForm.displayName,
-      }, { onConflict: "user_id" });
+      }, { onConflict: "id" });
 
       // Assign role
       await (supabase as any).from("user_roles").upsert({

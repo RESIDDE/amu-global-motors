@@ -18,7 +18,7 @@ export async function logAction(
       const { data: profile } = await supabase
         .from("profiles")
         .select("display_name")
-        .eq("user_id", userId)
+        .eq("id", userId)
         .single();
       userName = profile?.display_name ?? undefined;
     }

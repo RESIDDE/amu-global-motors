@@ -2,6 +2,51 @@ import { toast } from "sonner";
 import { getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
 import { getPrintFooterHTML } from "@/components/PrintFooter";
 import html2canvas from "html2canvas";
+import { jsPDF } from "jspdf";
+
+export async function downloadAsPDF(html: string, filename: string) {
+  const container = document.createElement("div");
+  // Set styles to make it look like a proper document
+  container.style.position = "absolute";
+  container.style.left = "-9999px";
+  container.style.top = "0";
+  container.style.width = "800px";
+  container.style.padding = "40px";
+  container.style.backgroundColor = "#ffffff";
+  container.style.fontFamily = "system-ui, -apple-system, sans-serif";
+  container.innerHTML = html;
+  document.body.appendChild(container);
+
+  try {
+    toast.info("Generating PDF...");
+    const canvas = await html2canvas(container, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+    });
+    
+    const imgData = canvas.toDataURL("image/png");
+    const imgWidth = 595; // A4 width in pts
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    
+    const pdf = new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "a4"
+    });
+    
+    // Add image, scaling it to fit A4 width
+    pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+    pdf.save(`${filename}.pdf`);
+    toast.success("Downloaded as PDF");
+  } catch (error) {
+    console.error("PDF export failed:", error);
+    toast.error("Failed to generate PDF");
+  } finally {
+    document.body.removeChild(container);
+  }
+}
 
 export function exportToCSV(data: Record<string, any>[], filename: string) {
   if (data.length === 0) { toast.error("No data to export"); return; }

@@ -24,7 +24,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { PlusCircle, FileText, Printer, Trash2, Receipt, Search, Download } from "lucide-react";
-import { triggerPrint, downloadAsPNG } from "@/lib/exportHelpers";
+import { triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -258,8 +258,9 @@ export default function Invoices() {
     triggerPrint(html);
   };
 
-  const handleDownloadPDF = (inv: any) => {
-    printInvoice(inv);
+  const handleDownloadPDF = async (inv: any) => {
+    const html = getInvoiceHTML(inv);
+    await downloadAsPDF(html, `invoice_${inv.invoice_number}`);
   };
 
   const handleDownloadPNG = async (inv: any) => {
@@ -370,7 +371,7 @@ export default function Invoices() {
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
                         <DropdownMenuItem onClick={() => handleDownloadPDF(inv)} className="rounded-lg cursor-pointer">
-                          <Printer className="mr-2 h-4 w-4" /> Download PDF
+                          <FileText className="mr-2 h-4 w-4 text-cyan-500" /> Download PDF (Direct)
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleDownloadPNG(inv)} className="rounded-lg cursor-pointer">
                           <Download className="mr-2 h-4 w-4" /> Download PNG

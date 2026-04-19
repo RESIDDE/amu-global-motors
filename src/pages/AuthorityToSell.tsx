@@ -12,7 +12,7 @@ import {
   ArrowLeft, Trash2, PlusCircle, Users, Car, Pencil, Download, 
   ChevronRight, ChevronLeft, ShieldCheck, FileCheck, Info, Clock, AlertTriangle
 } from "lucide-react";
-import { downloadAsPNG } from "@/lib/exportHelpers";
+import { downloadAsPNG, downloadAsPDF, triggerPrint } from "@/lib/exportHelpers";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,7 +26,6 @@ import { PrintHeader, PrintWatermark, getPrintHeaderHTML, getPrintWatermarkHTML 
 import { PrintFooter, getPrintFooterHTML } from "@/components/PrintFooter";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
-import { triggerPrint } from "@/lib/exportHelpers";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -444,6 +443,12 @@ export default function AuthorityToSell() {
               <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
                 <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer">
                   <Printer className="mr-2 h-4 w-4 text-sky-500" /> Print Document (PDF)
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => downloadAsPDF(getATSHTML(formData, signature, repSignature), `ats_${formData.customerName.replace(/\s+/g, '_')}`)}
+                  className="rounded-lg cursor-pointer"
+                >
+                  <FileText className="mr-2 h-4 w-4 text-sky-500" /> Download PDF (Direct)
                 </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => downloadAsPNG(getATSHTML(formData, signature, repSignature), `ats_${formData.customerName.replace(/\s+/g, '_')}`)}

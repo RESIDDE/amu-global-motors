@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/pagination";
 import { PlusCircle, Pencil, Trash2, Receipt, Download, FileText, Printer, FileOutput, DollarSign, Calendar, Search, Car, Users, QrCode, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { exportToCSV, exportToJSON, printTable, triggerPrint, downloadAsPNG } from "@/lib/exportHelpers";
+import { exportToCSV, exportToJSON, printTable, triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 import { getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
@@ -326,8 +326,9 @@ export default function Sales() {
     triggerPrint(html);
   };
 
-  const handleDownloadPDF = (sale: any) => {
-    printReceipt(sale);
+  const handleDownloadPDF = async (sale: any) => {
+    const html = getReceiptHTML(sale);
+    await downloadAsPDF(html, `receipt_${sale.id.slice(0, 8)}`);
   };
 
   const handleDownloadPNG = async (sale: any) => {
@@ -444,7 +445,7 @@ export default function Sales() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10">
                               <DropdownMenuItem onClick={() => handleDownloadPDF(s)} className="rounded-lg cursor-pointer">
-                                <Printer className="mr-2 h-4 w-4" /> Download as PDF
+                                <FileText className="mr-2 h-4 w-4 text-violet-500" /> Download PDF (Direct)
                               </DropdownMenuItem>
                               <DropdownMenuItem onClick={() => handleDownloadPNG(s)} className="rounded-lg cursor-pointer">
                                 <Download className="mr-2 h-4 w-4" /> Download as PNG

@@ -33,7 +33,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
 
       Promise.all([
-        supabase.from("profiles").select("*").eq("user_id", user.id).single(),
+        supabase.from("profiles").select("*").eq("id", user.id).single(),
         (supabase as any).from("user_roles").select("role").eq("user_id", user.id).single(),
       ])
         .then(([{ data: profile }, { data: roleData }]) => {
