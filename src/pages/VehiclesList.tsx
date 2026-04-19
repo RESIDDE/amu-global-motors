@@ -20,12 +20,37 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Link } from "react-router-dom";
-import { PlusCircle, Search, Eye, Pencil, Trash2, Download, FileText, Printer, Car, ListFilter } from "lucide-react";
+import { PlusCircle, Search, Eye, Pencil, Trash2, Download, FileText, Printer, Car, ListFilter, DollarSign, Wrench, BarChart3, PieChart as PieChartIcon, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV, exportToJSON, printTable } from "@/lib/exportHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 import { logAction } from "@/lib/logger";
+import {
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, AreaChart, Area, CartesianGrid
+} from "recharts";
+import { useMemo } from "react";
+import { format, subMonths, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
+
+const COLORS = ["hsl(var(--primary))", "hsl(199 89% 48%)", "hsl(142 76% 36%)", "hsl(38 92% 50%)", "hsl(262 83% 58%)", "hsl(0 84% 60%)"];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="glass-panel p-3 border border-white/20 shadow-2xl rounded-xl z-50">
+        <p className="font-semibold text-foreground mb-1">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-sm font-medium flex justify-between gap-4" style={{ color: entry.color || entry.fill }}>
+            <span>{entry.name}:</span> 
+            <span>{entry.name.toLowerCase().includes('value') || entry.name.toLowerCase().includes('price') ? `₦${entry.value.toLocaleString()}` : entry.value}</span>
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
 
 const PAGE_SIZE = 20;
 
@@ -47,6 +72,77 @@ export default function VehiclesList() {
       return data;
     },
   });
+
+  const stats = useMemo(() => {
+    const fleet = vehicles.filter(v => v.status !== "Customer Car");
+    const totalCount = fleet.length;
+    const availableCount = fleet.filter(v => v.status?.toLowerCase() === "available").length;
+    const repairCount = fleet.filter(v => v.status?.toLowerCase() === "under repair").length;
+    const totalInventoryValue = fleet.filter(v => v.status?.toLowerCase() === "available").reduce((sum, v) => sum + Number(v.price || 0), 0);
+    
+    // Average price
+    const avgPrice = availableCount > 0 ? totalInventoryValue / availableCount : 0;
+
+    // Recent Additions (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentAdditions = fleet.filter(v => new Date(v.created_at) >= thirtyDaysAgo).length;
+
+    // Make Distribution
+    const makesMap = fleet.reduce((acc: Record<string, number>, v) => {
+      acc[v.make] = (acc[v.make] || 0) + 1;
+      return acc;
+    }, {});
+    const makeData = Object.entries(makesMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+
+    // Condition Distribution
+    const conditionMap = fleet.reduce((acc: Record<string, number>, v) => {
+      const cond = (v as any).condition || "Unknown";
+      acc[cond] = (acc[cond] || 0) + 1;
+      return acc;
+    }, {});
+    const conditionData = Object.entries(conditionMap).map(([name, value]) => ({ name, value }));
+
+    // Status Distribution
+    const statusMap = fleet.reduce((acc: Record<string, number>, v) => {
+      const s = v.status || "Unknown";
+      acc[s] = (acc[s] || 0) + 1;
+      return acc;
+    }, {});
+    const statusData = Object.entries(statusMap).map(([name, value]) => ({ name, value }));
+
+    // Monthly arrivals
+    const monthlyTrend: { name: string; Arrivals: number }[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = subMonths(new Date(), i);
+      const start = startOfMonth(d);
+      const end = endOfMonth(d);
+      const count = fleet.filter(v => {
+        const arrivalDate = new Date((v as any).date_arrived || v.created_at);
+        return isWithinInterval(arrivalDate, { start, end });
+      }).length;
+      monthlyTrend.push({ 
+        name: format(d, "MMM"), 
+        Arrivals: count 
+      });
+    }
+
+    return {
+      totalCount,
+      availableCount,
+      repairCount,
+      totalInventoryValue,
+      avgPrice,
+      recentAdditions,
+      makeData,
+      conditionData,
+      statusData,
+      monthlyTrend
+    };
+  }, [vehicles]);
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -90,7 +186,7 @@ export default function VehiclesList() {
       vehicle: `${v.year} ${v.make} ${v.model}`, vin: v.vin || "—", price: `₦${Number(v.price).toLocaleString()}`,
       status: v.status, condition: (v as any).condition || "—",
     }));
-    printTable("Vehicles Inventory — Beetee Autos", rows, [
+    printTable("Vehicles Inventory — AMU Global Motors", rows, [
       { key: "vehicle", label: "Vehicle" }, { key: "vin", label: "VIN" },
       { key: "price", label: "Price" }, { key: "status", label: "Status" }, { key: "condition", label: "Condition" },
     ]);
@@ -99,18 +195,132 @@ export default function VehiclesList() {
   return (
     <div className="space-y-8 animate-fade-up pb-10 max-w-6xl mx-auto">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      {/* Dashboard Section */}
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-12 gap-4 md:gap-6 items-stretch">
+        {/* KPI Cards */}
+        <div className="lg:col-span-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bento-card p-5 relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-sky-500/10 rounded-full blur-2xl group-hover:bg-sky-500/20 transition-all" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-sky-500/10 rounded-xl"><Car className="h-4 w-4 text-sky-500" /></div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Fleet</span>
+            </div>
+            <h3 className="text-3xl font-bold">{stats.totalCount}</h3>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">{stats.availableCount} Available</p>
+          </div>
+
+          <div className="bento-card p-5 relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-all" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-emerald-500/10 rounded-xl"><DollarSign className="h-4 w-4 text-emerald-500" /></div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Value</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold truncate">₦{stats.totalInventoryValue >= 1000000 ? (stats.totalInventoryValue / 1000000).toFixed(1) + 'M' : stats.totalInventoryValue.toLocaleString()}</h3>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Market Value</p>
+          </div>
+
+          <div className="bento-card p-5 relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-amber-500/10 rounded-full blur-2xl group-hover:bg-amber-500/20 transition-all" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-amber-500/10 rounded-xl"><Wrench className="h-4 w-4 text-amber-500" /></div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Repairs</span>
+            </div>
+            <h3 className="text-3xl font-bold">{stats.repairCount}</h3>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">Under Maintenance</p>
+          </div>
+
+          <div className="bento-card p-5 relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-16 h-16 bg-violet-500/10 rounded-full blur-2xl group-hover:bg-violet-500/20 transition-all" />
+            <div className="flex items-center gap-3 mb-3">
+              <div className="p-2 bg-violet-500/10 rounded-xl"><TrendingUp className="h-4 w-4 text-violet-500" /></div>
+              <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Active</span>
+            </div>
+            <h3 className="text-3xl font-bold">{stats.recentAdditions}</h3>
+            <p className="text-xs text-muted-foreground mt-1 font-medium">New Arrivals (30d)</p>
+          </div>
+
+          {/* Monthly Trend Area Chart - 8 Cols within this section */}
+          <div className="col-span-2 md:col-span-4 bento-card p-6 h-[220px]">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-sm font-semibold flex items-center gap-2">
+                <BarChart3 className="w-3.5 h-3.5 text-sky-500" /> Inventory Growth
+              </h4>
+              <span className="text-[10px] bg-sky-500/10 text-sky-500 px-2 py-0.5 rounded-full font-bold">LAST 6 MONTHS</span>
+            </div>
+            <div className="h-[120px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.monthlyTrend}>
+                  <defs>
+                    <linearGradient id="colorArrivals" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area type="monotone" dataKey="Arrivals" stroke="hsl(var(--primary))" fillOpacity={1} fill="url(#colorArrivals)" strokeWidth={2} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </div>
+
+        {/* Distribution Charts */}
+        <div className="lg:col-span-4 grid grid-cols-1 gap-4">
+          <div className="bento-card p-5 flex flex-col">
+            <h4 className="text-sm font-semibold mb-4 flex items-center gap-2"><PieChartIcon className="w-3.5 h-3.5 text-violet-500" /> Top Brands</h4>
+            <div className="flex-1 h-[140px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={stats.makeData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={40} outerRadius={60} paddingAngle={4}>
+                    {stats.makeData.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} stroke="none" />
+                    ))}
+                  </Pie>
+                  <Tooltip content={<CustomTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              {stats.makeData.slice(0, 4).map((m, i) => (
+                <div key={m.name} className="flex items-center gap-1.5">
+                  <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i] }} />
+                  <span className="text-[10px] font-medium truncate">{m.name} ({m.value})</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="bento-card p-5 flex flex-col">
+            <h4 className="text-sm font-semibold mb-4 flex items-center gap-2"><ListFilter className="w-3.5 h-3.5 text-emerald-500" /> Fleet Condition</h4>
+            <div className="space-y-3">
+              {stats.conditionData.map((c, i) => (
+                <div key={c.name} className="space-y-1">
+                  <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider">
+                    <span>{c.name}</span>
+                    <span className="text-muted-foreground">{c.value} Vehicles</span>
+                  </div>
+                  <div className="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
+                      style={{ width: `${(c.value / stats.totalCount) * 100}%` }} 
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mt-8">
         <div>
           <div className="flex items-center gap-2 mb-1 opacity-80">
             <Car className="w-4 h-4 text-sky-500" />
             <span className="text-sm font-medium uppercase tracking-wider text-sky-500">Fleet Management</span>
           </div>
-          <h1 className="text-4xl md:text-5xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-foreground via-foreground to-foreground/70 tracking-tight">
-            Vehicles
+          <h1 className="text-3xl md:text-4xl font-heading font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-foreground via-foreground to-foreground/70 tracking-tight">
+            Inventory List
           </h1>
-          <p className="text-base text-muted-foreground mt-2 max-w-xl">
-            View, add, and manage your vehicle inventory.
-          </p>
         </div>
         <div className="flex gap-2 shrink-0">
           <DropdownMenu>
