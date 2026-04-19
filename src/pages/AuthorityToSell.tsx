@@ -482,12 +482,12 @@ export default function AuthorityToSell() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-8">
-        <TabsList className="bg-card/40 border border-white/10 p-1.5 rounded-2xl w-fit">
-          <TabsTrigger value="create" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-sky-500/20 transition-all">
-            <PlusCircle className="w-4 h-4 mr-2" /> {editingId ? "Edit Agreement" : "New Agreement"}
+        <TabsList className="bg-card/40 border border-white/10 p-1 rounded-2xl w-full sm:w-fit grid grid-cols-2 sm:flex">
+          <TabsTrigger value="create" className="rounded-xl px-2 sm:px-8 py-2.5 font-bold data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-sky-500/20 transition-all text-xs sm:text-sm">
+            <PlusCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> {editingId ? "Edit" : "New"} Agreement
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-xl px-8 py-2.5 font-bold data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-sky-500/20 transition-all">
-            <History className="w-4 h-4 mr-2" /> Past Agreements
+          <TabsTrigger value="history" className="rounded-xl px-2 sm:px-8 py-2.5 font-bold data-[state=active]:bg-sky-500 data-[state=active]:text-white data-[state=active]:shadow-lg data-[state=active]:shadow-sky-500/20 transition-all text-xs sm:text-sm">
+            <History className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5 sm:mr-2" /> Past Agreements
           </TabsTrigger>
         </TabsList>
 
