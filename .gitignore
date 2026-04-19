@@ -22,3 +22,15 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment secrets
+.env
+.env.local
+.env.*
+
+# Supabase
+supabase/.temp/
+
+# SQL Backups and temp files
+old_schema.sql
+*.sql.bak

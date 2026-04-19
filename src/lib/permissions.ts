@@ -36,7 +36,7 @@ export const DEFAULT_PERMISSIONS: PermissionsMap = {
 
 // ─── localStorage persistence ────────────────────────────────────────────────
 
-const STORAGE_KEY = "beetee_permissions_v1";
+const STORAGE_KEY = "amuglobal_permissions_v1";
 
 type PermissionsMap = Record<Exclude<AppRole, "super_admin">, { view: PageKey[], edit: PageKey[] }>;
 

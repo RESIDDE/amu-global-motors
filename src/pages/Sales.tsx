@@ -230,7 +230,7 @@ export default function Sales() {
       sale_date: new Date(s.sale_date).toLocaleDateString(),
       notes: s.notes || "",
     }));
-    printTable("Sales Report — Beetee Autos", rows, [
+    printTable("Sales Report — AMU Global Motors", rows, [
       { key: "vehicle", label: "Vehicle" },
       { key: "customer", label: "Customer" },
       { key: "sale_price", label: "Sale Price" },
@@ -306,7 +306,7 @@ export default function Sales() {
         </div>
         <div class="sig-box">
           ${sale.rep_signature ? `<img src="${sale.rep_signature}" class="signature-img" />` : ""}
-          <p>Seller/Representative: <strong>${sale.rep_name || 'Beetee Autos'}</strong></p>
+          <p>Seller/Representative: <strong>${sale.rep_name || 'AMU Global Motors'}</strong></p>
         </div>
       </div>` : `
       <div class="signature-area">
@@ -315,7 +315,7 @@ export default function Sales() {
       </div>`}
 
     <div class="footer">
-      <p>Thank you for choosing Beetee Autos!</p>
+      <p>Thank you for choosing AMU Global Motors!</p>
     </div>
     ${getPrintFooterHTML()}
     </body></html>`;

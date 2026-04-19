@@ -244,7 +244,7 @@ export default function Invoices() {
       <div class="row"><span>Subtotal:</span><span>₦${Number(inv.subtotal).toLocaleString()}</span></div>
       <div class="row total-row"><span>Total Due:</span><span>₦${Number(inv.total).toLocaleString()}</span></div>
     </div>
-    <div class="footer"><p>Thank you for your business!</p><p>Beetee Autos — Professional Auto Sales & Services</p></div>
+    <div class="footer"><p>Thank you for your business!</p><p>AMU Global Motors — Professional Auto Sales & Services</p></div>
     ${getPrintFooterHTML()}
     </body></html>`;
     const win = window.open("", "_blank");

@@ -457,7 +457,7 @@ export default function RepairsMaintenance() {
       </p>
     </div>
 
-    <div class="footer">Thank you for your business!<br/><strong>Beetee Autos Team</strong></div>
+    <div class="footer">Thank you for your business!<br/><strong>AMU Global Motors Team</strong></div>
     ${getPrintFooterHTML()}
     </body></html>`;
     const win = window.open("", "_blank");

@@ -60,7 +60,7 @@ DECLARE
   first_user boolean;
 BEGIN
   -- Insert profile
-  INSERT INTO public.profiles (user_id, display_name, phone)
+  INSERT INTO public.profiles (id, display_name, phone)
   VALUES (new.id, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'phone');
 
   -- Insert role (temporarily make everyone admin as requested)
