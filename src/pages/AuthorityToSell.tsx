@@ -441,20 +441,20 @@ export default function AuthorityToSell() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
-                <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer">
-                  <Printer className="mr-2 h-4 w-4 text-sky-500" /> Print Document (PDF)
-                </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => downloadAsPDF(getATSHTML(formData, signature, repSignature), `ats_${formData.customerName.replace(/\s+/g, '_')}`)}
-                  className="rounded-lg cursor-pointer"
+                  className="rounded-lg cursor-pointer font-bold"
                 >
                   <FileText className="mr-2 h-4 w-4 text-sky-500" /> Download PDF (Direct)
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer text-muted-foreground mt-1 pt-2 border-t border-white/5">
+                  <Printer className="mr-2 h-4 w-4" /> Print / Save PDF (Dialog)
+                </DropdownMenuItem>
                 <DropdownMenuItem 
                   onClick={() => downloadAsPNG(getATSHTML(formData, signature, repSignature), `ats_${formData.customerName.replace(/\s+/g, '_')}`)}
-                  className="rounded-lg cursor-pointer"
+                  className="rounded-lg cursor-pointer text-muted-foreground"
                 >
-                  <Download className="mr-2 h-4 w-4 text-sky-500" /> Download as Image
+                  <Download className="mr-2 h-4 w-4" /> Download as Image (PNG)
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

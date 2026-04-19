@@ -92,6 +92,28 @@ export function printTable(title: string, data: Record<string, any>[], columns: 
   triggerPrint(html);
 }
 
+export async function downloadTableAsPDF(title: string, data: Record<string, any>[], columns: { key: string; label: string }[]) {
+  const html = `
+    <html><head><title>${title}</title>
+    <style>
+      body { font-family: Arial, sans-serif; padding: 20px; }
+      h1 { font-size: 18px; margin-bottom: 16px; text-align: center; }
+      table { width: 100%; border-collapse: collapse; font-size: 11px; }
+      th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      th { background: #f5f5f5; font-weight: 600; text-transform: uppercase; }
+    </style></head><body>
+      ${getPrintWatermarkHTML()}
+      ${getPrintHeaderHTML()}
+      <h1>${title}</h1>
+      <table>
+        <thead><tr>${columns.map((c) => `<th>${c.label}</th>`).join("")}</tr></thead>
+        <tbody>${data.map((row) => `<tr>${columns.map((c) => `<td>${row[c.key] ?? "—"}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+      ${getPrintFooterHTML()}
+    </body></html>`;
+  await downloadAsPDF(html, title.toLowerCase().replace(/\s+/g, '_'));
+}
+
 export function triggerPrint(html: string) {
   const win = window.open("", "_blank");
   if (win) {

@@ -22,7 +22,7 @@ import {
 import { Link } from "react-router-dom";
 import { PlusCircle, Search, Eye, Pencil, Trash2, Download, FileText, Printer, Car, ListFilter, DollarSign, Wrench, BarChart3, PieChart as PieChartIcon, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
-import { exportToCSV, exportToJSON, printTable } from "@/lib/exportHelpers";
+import { exportToCSV, exportToJSON, printTable, downloadTableAsPDF, triggerPrint } from "@/lib/exportHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 import { logAction } from "@/lib/logger";
@@ -192,6 +192,17 @@ export default function VehiclesList() {
     ]);
   };
 
+  const handleDownloadSummaryPDF = async () => {
+    const rows = filtered.map((v) => ({
+      vehicle: `${v.year} ${v.make} ${v.model}`, vin: v.vin || "—", price: `₦${Number(v.price).toLocaleString()}`,
+      status: v.status, condition: (v as any).condition || "—",
+    }));
+    await downloadTableAsPDF("Vehicles Inventory Summary", rows, [
+      { key: "vehicle", label: "Vehicle" }, { key: "vin", label: "VIN" },
+      { key: "price", label: "Price" }, { key: "status", label: "Status" }, { key: "condition", label: "Condition" },
+    ]);
+  };
+
   return (
     <div className="space-y-8 animate-fade-up pb-10 max-w-6xl mx-auto">
       {/* Header Section */}
@@ -330,9 +341,18 @@ export default function VehiclesList() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
-              <DropdownMenuItem onClick={handleExportCSV} className="rounded-lg cursor-pointer"><FileText className="mr-2 h-4 w-4" /> Export to CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportJSON} className="rounded-lg cursor-pointer"><FileText className="mr-2 h-4 w-4" /> Export to JSON</DropdownMenuItem>
-              <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer text-primary"><Printer className="mr-2 h-4 w-4" /> Print / PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCSV} className="rounded-lg cursor-pointer">
+                <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Export to CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportJSON} className="rounded-lg cursor-pointer">
+                <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Export to JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownloadSummaryPDF} className="rounded-lg cursor-pointer text-sky-500 font-bold">
+                <FileText className="mr-2 h-4 w-4" /> Download PDF Inventory (Direct)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer text-muted-foreground mt-1 py-1 border-t border-white/5">
+                <Printer className="mr-2 h-4 w-4" /> Print / Save PDF (Dialog)
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button asChild size="lg" className="rounded-2xl shadow-lg shadow-sky-500/25 hover:shadow-sky-500/40 transition-all bg-sky-500 hover:bg-sky-600">

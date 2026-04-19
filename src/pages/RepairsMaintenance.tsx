@@ -18,7 +18,7 @@ import {
   ChevronRight, ArrowRight, Receipt, ClipboardCheck, Wrench, PlusCircle, Clock, DollarSign, PieChart as PieChartIcon, Search, Car, Pencil, QrCode, FileOutput, Trash2, History as HistoryIcon, Download,
   Printer, FileText
 } from "lucide-react";
-import { triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
+import { triggerPrint, downloadAsPNG, downloadAsPDF, downloadTableAsPDF } from "@/lib/exportHelpers";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -429,6 +429,44 @@ export default function RepairsMaintenance() {
     return null;
   };
 
+  const printRepairList = () => {
+    const rows = filteredRepairs.map((r) => ({
+      vehicle: getVehicleLabel(r),
+      customer: customers.find(c => c.id === r.customer_id)?.name || "—",
+      company: r.company || "—",
+      cost: `₦${Number(r.repair_cost || 0).toLocaleString()}`,
+      status: paymentStatusLabel(r.payment_status),
+      date: new Date(r.created_at).toLocaleDateString(),
+    }));
+    printTable("Repairs & Maintenance — AMU Global Motors", rows, [
+      { key: "vehicle", label: "Vehicle" },
+      { key: "customer", label: "Customer" },
+      { key: "company", label: "Company" },
+      { key: "cost", label: "Cost" },
+      { key: "status", label: "Status" },
+      { key: "date", label: "Date In" },
+    ]);
+  };
+
+  const handleDownloadSummaryPDF = async () => {
+    const rows = filteredRepairs.map((r) => ({
+      vehicle: getVehicleLabel(r),
+      customer: customers.find(c => c.id === r.customer_id)?.name || "—",
+      company: r.company || "—",
+      cost: `₦${Number(r.repair_cost || 0).toLocaleString()}`,
+      status: paymentStatusLabel(r.payment_status),
+      date: new Date(r.created_at).toLocaleDateString(),
+    }));
+    await downloadTableAsPDF("Repairs & Maintenance Summary", rows, [
+      { key: "vehicle", label: "Vehicle" },
+      { key: "customer", label: "Customer" },
+      { key: "company", label: "Company" },
+      { key: "cost", label: "Cost" },
+      { key: "status", label: "Status" },
+      { key: "date", label: "Date In" },
+    ]);
+  };
+
   const getBillHTML = (r: Repair) => {
     const cust = customers.find(c => c.id === r.customer_id);
     const balance = (Number(r.repair_cost) || 0) - (Number(r.deposit_amount) || 0);
@@ -679,7 +717,22 @@ export default function RepairsMaintenance() {
              Manage service logs, parts replacements, and track vehicle repair history across your fleet.
           </p>
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 flex gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="lg" className="rounded-2xl glass-panel border-white/10 hover:bg-white/5 transition-all">
+                <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
+              <DropdownMenuItem onClick={handleDownloadSummaryPDF} className="rounded-lg cursor-pointer text-amber-500 font-bold">
+                <FileText className="mr-2 h-4 w-4" /> Download PDF Summary (Direct)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={printRepairList} className="rounded-lg cursor-pointer text-muted-foreground mt-1 py-1 border-t border-white/5">
+                <Printer className="mr-2 h-4 w-4" /> Print / Save PDF (Dialog)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => { setForm(emptyForm); setEditId(null); setOpen(true); }} size="lg" className="rounded-2xl shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 transition-all bg-amber-500 hover:bg-amber-600 text-white">
             <PlusCircle className="mr-2 h-5 w-5" /> Record Repair
           </Button>

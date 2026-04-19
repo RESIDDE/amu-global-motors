@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/pagination";
 import { PlusCircle, Pencil, Trash2, Receipt, Download, FileText, Printer, FileOutput, DollarSign, Calendar, Search, Car, Users, QrCode, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { exportToCSV, exportToJSON, printTable, triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
+import { exportToCSV, exportToJSON, printTable, downloadTableAsPDF, triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 import { getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
@@ -239,6 +239,23 @@ export default function Sales() {
     ]);
   };
 
+  const handleDownloadSummaryPDF = async () => {
+    const rows = sales.map((s) => ({
+      vehicle: vehicleMap[s.vehicle_id] || s.vehicle_id,
+      customer: customerMap[s.customer_id] || s.customer_id,
+      sale_price: `₦${Number(s.sale_price).toLocaleString()}`,
+      sale_date: new Date(s.sale_date).toLocaleDateString(),
+      notes: s.notes || "",
+    }));
+    await downloadTableAsPDF("Sales Summary — AMU Global Motors", rows, [
+      { key: "vehicle", label: "Vehicle" },
+      { key: "customer", label: "Customer" },
+      { key: "sale_price", label: "Price" },
+      { key: "sale_date", label: "Date" },
+      { key: "notes", label: "Notes" },
+    ]);
+  };
+
   const getReceiptHTML = (sale: any) => {
     const cust = customerObjMap[sale.customer_id];
     const saleItems = sale.sale_vehicles?.length > 0 
@@ -361,9 +378,18 @@ export default function Sales() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
-              <DropdownMenuItem onClick={handleExportCSV} className="rounded-lg cursor-pointer"><FileText className="mr-2 h-4 w-4" /> Export to CSV</DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportJSON} className="rounded-lg cursor-pointer"><FileText className="mr-2 h-4 w-4" /> Export to JSON</DropdownMenuItem>
-              <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer text-violet-500"><Printer className="mr-2 h-4 w-4" /> Print / PDF</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportCSV} className="rounded-lg cursor-pointer">
+                <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Export to CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportJSON} className="rounded-lg cursor-pointer">
+                <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Export to JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleDownloadSummaryPDF} className="rounded-lg cursor-pointer text-violet-500 font-bold">
+                <FileText className="mr-2 h-4 w-4" /> Download PDF Summary (Direct)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer text-muted-foreground py-2 border-t border-white/5 mt-1">
+                <Printer className="mr-2 h-4 w-4" /> Print / Save PDF (Dialog)
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button onClick={() => { setForm(emptyForm); setEditId(null); setDialogOpen(true); }} size="lg" className="rounded-2xl shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 transition-all bg-violet-500 hover:bg-violet-600 text-white">

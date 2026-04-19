@@ -361,7 +361,7 @@ export default function Invoices() {
 
                   <div className="flex gap-1 mt-6 pt-4 border-t border-white/5 justify-end">
                     <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-cyan-500/10 hover:text-cyan-500 text-muted-foreground transition-all" onClick={() => printInvoice(inv)}>
-                      <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
+                      <Printer className="h-3.5 w-3.5 mr-1.5" /> Print / Preview
                     </Button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -370,11 +370,11 @@ export default function Invoices() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
-                        <DropdownMenuItem onClick={() => handleDownloadPDF(inv)} className="rounded-lg cursor-pointer">
+                        <DropdownMenuItem onClick={() => handleDownloadPDF(inv)} className="rounded-lg cursor-pointer font-bold">
                           <FileText className="mr-2 h-4 w-4 text-cyan-500" /> Download PDF (Direct)
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDownloadPNG(inv)} className="rounded-lg cursor-pointer">
-                          <Download className="mr-2 h-4 w-4" /> Download PNG
+                        <DropdownMenuItem onClick={() => handleDownloadPNG(inv)} className="rounded-lg cursor-pointer text-muted-foreground mt-1 py-2 border-t border-white/5">
+                          <Download className="mr-2 h-4 w-4" /> Download PNG (Image)
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
