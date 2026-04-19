@@ -20,11 +20,21 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, Pencil, Trash2, MessageSquare, Car, Users, Search } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, MessageSquare, Car, Users, Search, Eye, Download, FileJson, FileSpreadsheet, Printer } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { exportToCSV, exportToJSON, downloadTableAsPDF } from "@/lib/exportHelpers";
+import { format } from "date-fns";
 
 const statuses = ["Open", "In Progress", "Closed"];
 const emptyForm = { 
@@ -49,6 +59,7 @@ export default function Inquiries() {
   const [form, setForm] = useState(emptyForm);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [viewId, setViewId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 15;
   const queryClient = useQueryClient();
@@ -123,7 +134,10 @@ export default function Inquiries() {
       toast.success(editId ? "Inquiry updated" : "Inquiry added");
       closeDialog();
     },
-    onError: () => toast.error("Failed to save inquiry"),
+    onError: (error: any) => {
+      console.error("Save inquiry error:", error);
+      toast.error(`Failed to save inquiry: ${error.message || "Unknown error"}`);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -137,6 +151,34 @@ export default function Inquiries() {
     },
     onError: () => toast.error("Failed to delete inquiry"),
   });
+
+  const handleExport = async (type: "csv" | "json" | "pdf") => {
+    const exportData = filtered.map(i => ({
+      Customer: i.customer_id ? (customerMap[i.customer_id] || "Unknown") : (i.manual_customer_name || "—"),
+      Contact: (!i.customer_id && (i.manual_customer_phone || i.manual_customer_email)) 
+        ? `${i.manual_customer_phone || ""} ${i.manual_customer_email || ""}`.trim() 
+        : "—",
+      Vehicle: i.vehicle_id ? (vehicleMap[i.vehicle_id] || "—") : 
+        (i.manual_vehicle_make ? `${i.manual_vehicle_year || ""} ${i.manual_vehicle_make} ${i.manual_vehicle_model || ""}` : "—"),
+      Message: i.message,
+      Status: i.status,
+      Date: format(new Date(i.created_at), "yyyy-MM-dd HH:mm")
+    }));
+
+    if (type === "csv") {
+      exportToCSV(exportData, "inquiries_export");
+    } else if (type === "json") {
+      exportToJSON(exportData, "inquiries_export");
+    } else {
+      const columns = [
+        { key: "Customer", label: "Customer" },
+        { key: "Vehicle", label: "Vehicle Interest" },
+        { key: "Status", label: "Status" },
+        { key: "Date", label: "Date" }
+      ];
+      await downloadTableAsPDF("Customer Inquiries", exportData, columns);
+    }
+  };
 
   const closeDialog = () => { setDialogOpen(false); setEditId(null); setForm(emptyForm); };
 
@@ -173,7 +215,27 @@ export default function Inquiries() {
             Track customer requests, messages, and vehicle interest logs.
           </p>
         </div>
-        <div className="shrink-0">
+        <div className="flex items-center gap-3">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="lg" className="rounded-2xl border-white/10 hover:bg-white/5">
+                <Download className="mr-2 h-4 w-4" /> Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="glass-panel border-white/10 rounded-xl">
+              <DropdownMenuLabel>Export Options</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => handleExport("csv")} className="cursor-pointer">
+                <FileSpreadsheet className="mr-2 h-4 w-4 text-emerald-500" /> Export CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("json")} className="cursor-pointer">
+                <FileJson className="mr-2 h-4 w-4 text-amber-500" /> Export JSON
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("pdf")} className="cursor-pointer">
+                <Printer className="mr-2 h-4 w-4 text-indigo-500" /> Print / Save PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button onClick={() => { setForm(emptyForm); setEditId(null); setDialogOpen(true); }} size="lg" className="rounded-2xl shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 transition-all bg-indigo-500 hover:bg-indigo-600 text-white">
             <PlusCircle className="mr-2 h-5 w-5" /> Add Inquiry
           </Button>
@@ -260,6 +322,9 @@ export default function Inquiries() {
                       </TableCell>
                       <TableCell className="text-right px-6">
                         <div className="flex justify-end gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                          <Button variant="ghost" size="icon" onClick={() => setViewId(i.id)} className="h-8 w-8 rounded-lg hover:bg-indigo-500/20 hover:text-indigo-500">
+                             <Eye className="h-4 w-4" />
+                          </Button>
                           {hasEdit && (
                             <>
                               <Button variant="ghost" size="icon" onClick={() => openEdit(i)} className="h-8 w-8 rounded-lg hover:bg-foreground/20">
@@ -318,6 +383,87 @@ export default function Inquiries() {
           )}
         </div>
       )}
+
+      <Dialog open={!!viewId} onOpenChange={(open) => { if (!open) setViewId(null); }}>
+        <DialogContent className="max-w-lg rounded-3xl glass-panel shadow-2xl border-white/10 p-0 bg-background/95 backdrop-blur-3xl">
+          <div className="p-6 border-b border-white/5 bg-indigo-500/5">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2 text-indigo-400">
+                <MessageSquare className="h-5 w-5" /> Inquiry Details
+              </DialogTitle>
+            </DialogHeader>
+          </div>
+          <div className="p-6 space-y-6">
+            {viewId && (
+              <>
+                <div className="grid grid-cols-2 gap-6 pb-6 border-b border-white/5">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Customer</Label>
+                    <div className="flex items-center gap-2">
+                      <Users className="h-4 w-4 text-indigo-500" />
+                      <span className="font-bold text-sm">
+                        {(() => {
+                          const i = inquiries.find(x => x.id === viewId);
+                          return i?.customer_id ? (customerMap[i.customer_id] || "—") : (i?.manual_customer_name || "—");
+                        })()}
+                      </span>
+                    </div>
+                    {(() => {
+                      const i = inquiries.find(x => x.id === viewId);
+                      return (!i?.customer_id && (i?.manual_customer_phone || i?.manual_customer_email)) && (
+                        <p className="text-xs text-muted-foreground pl-6">
+                          {i.manual_customer_phone} {i.manual_customer_email && `| ${i.manual_customer_email}`}
+                        </p>
+                      );
+                    })()}
+                  </div>
+                  <div className="space-y-1 text-right">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Inquiry Date</Label>
+                    <p className="text-sm font-medium">
+                      {format(new Date(inquiries.find(x => x.id === viewId)?.created_at), "PPP p")}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="p-4 rounded-2xl bg-indigo-500/5 border border-indigo-500/10 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <Label className="text-[10px] font-bold uppercase tracking-wider text-indigo-400">Vehicle Interest</Label>
+                      <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase ${
+                        inquiries.find(x => x.id === viewId)?.status === "Open" ? "bg-indigo-500/20 text-indigo-400" :
+                        inquiries.find(x => x.id === viewId)?.status === "In Progress" ? "bg-amber-500/20 text-amber-400" :
+                        "bg-muted text-muted-foreground"
+                      }`}>
+                        {inquiries.find(x => x.id === viewId)?.status}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <Car className="h-5 w-5 text-muted-foreground" />
+                      <span className="font-semibold">
+                        {(() => {
+                          const i = inquiries.find(x => x.id === viewId);
+                          return i?.vehicle_id ? (vehicleMap[i.vehicle_id] || "—") : 
+                            (i?.manual_vehicle_make ? `${i.manual_vehicle_year || ""} ${i.manual_vehicle_make} ${i.manual_vehicle_model || ""}` : "No specific vehicle");
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Message Transcript</Label>
+                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 text-sm leading-relaxed whitespace-pre-wrap min-h-[100px]">
+                      {inquiries.find(x => x.id === viewId)?.message}
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+          <div className="p-6 border-t border-white/5 bg-foreground/5 flex justify-end">
+            <Button onClick={() => setViewId(null)} className="rounded-xl px-8 shadow-lg shadow-indigo-500/20 bg-indigo-500 hover:bg-indigo-600 text-white">Close View</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); }}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl glass-panel shadow-2xl border-white/10 p-0 bg-background/95 backdrop-blur-3xl">
