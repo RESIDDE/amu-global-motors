@@ -308,9 +308,9 @@ export default function AuthorityToSell() {
 
   // ── Helper ────────────────────────────────────────────────────────────────
   const Field = ({ label, value }: { label: string; value: string }) => (
-    <div className="flex items-baseline gap-2 py-1 border-b border-gray-200">
-      <span className="font-bold text-sm text-gray-800 whitespace-nowrap">{label}:</span>
-      <span className="flex-1 text-sm text-gray-900 font-medium">
+    <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 py-2 sm:py-1 border-b border-gray-200">
+      <span className="font-bold text-[13px] sm:text-sm text-gray-800 shrink-0">{label}:</span>
+      <span className="flex-1 text-[13px] sm:text-sm text-gray-900 font-medium break-words">
         {value || <span className="text-transparent select-none">{"_".repeat(30)}</span>}
       </span>
     </div>
@@ -321,7 +321,7 @@ export default function AuthorityToSell() {
   // ══════════════════════════════════════════════════════════════
   if (mode === "preview") {
     return (
-      <div className="animate-fade-up max-w-4xl mx-auto pb-12 print:p-0 print:m-0">
+      <div className="animate-fade-up max-w-4xl mx-auto pb-12 px-2 sm:px-4 print:p-0 print:m-0">
         {/* Toolbar */}
         <div className="flex items-center justify-between mb-6 print:hidden">
           <Button variant="outline" onClick={() => setMode("edit")} className="rounded-xl gap-2 font-medium">
@@ -350,8 +350,13 @@ export default function AuthorityToSell() {
         {/* Printable Document */}
         <div
           ref={documentRef}
-          className="bg-white text-black rounded-3xl shadow-2xl border border-gray-100 print:shadow-none print:border-none print:rounded-none"
-          style={{ minHeight: "1056px", padding: "48px 56px" }}
+          className="bg-white text-black rounded-3xl shadow-2xl border border-gray-100 print:shadow-none print:border-none print:rounded-none overflow-hidden mx-auto"
+          style={{ 
+            minHeight: window.innerWidth > 640 ? "1056px" : "auto", 
+            padding: window.innerWidth > 640 ? "48px 56px" : "24px 20px",
+            width: "100%",
+            maxWidth: "100%"
+          }}
         >
           <PrintWatermark />
           <PrintHeader />
@@ -431,7 +436,7 @@ export default function AuthorityToSell() {
           {/* Signatures */}
           <section>
             <h2 className="font-black text-sm uppercase tracking-wide mb-6">Signatures</h2>
-            <div className="grid grid-cols-2 gap-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
               {/* Owner */}
               <div>
                 <p className="text-xs font-bold text-gray-600 mb-1">Owner's Signature:</p>
@@ -704,8 +709,9 @@ export default function AuthorityToSell() {
 
             {/* Table */}
             <div className="bento-card overflow-hidden">
-              <div className="overflow-x-auto">
-                <Table>
+              <div className="overflow-x-auto w-full">
+                <div className="min-w-[800px]">
+                  <Table>
                   <TableHeader className="bg-foreground/5">
                     <TableRow className="border-white/5 hover:bg-transparent">
                       <TableHead className="font-bold uppercase tracking-widest text-[10px] py-6 px-6">Date</TableHead>
@@ -809,6 +815,7 @@ export default function AuthorityToSell() {
                     )}
                   </TableBody>
                 </Table>
+                </div>
               </div>
             </div>
           </div>
