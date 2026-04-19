@@ -353,131 +353,131 @@ export default function AuthorityToSell() {
             ref={documentRef}
             className="bg-white text-black rounded-xl sm:rounded-3xl shadow-2xl border border-gray-100 print:shadow-none print:border-none print:rounded-none overflow-hidden h-auto sm:min-h-[1056px] p-6 sm:p-14 w-full max-w-full sm:w-auto"
           >
-          <PrintWatermark />
-          <PrintHeader />
+            <PrintWatermark />
+            <PrintHeader />
 
-          {/* Title */}
-          <div className="text-center my-6">
-            <h1 className="text-xl font-black text-black uppercase tracking-widest underline underline-offset-4">
-              Authority to Sell Vehicle
-            </h1>
-          </div>
-
-          {/* Date */}
-          <div className="flex items-baseline gap-2 mb-8 border-b border-gray-300 pb-1">
-            <span className="font-bold text-sm">Date:</span>
-            <span className="text-sm font-medium flex-1">
-              {formData.agreementDate
-                ? new Date(formData.agreementDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
-                : ""}
-            </span>
-          </div>
-
-          {/* Owner's Information */}
-          <section className="mb-8">
-            <h2 className="font-black text-sm uppercase tracking-wide mb-1">Owner's Information</h2>
-            <div className="space-y-1">
-              <Field label="Full Name" value={formData.customerName} />
-              <Field label="Address" value={formData.customerAddress} />
-              <Field label="Contact Number" value={formData.customerPhone} />
-              <Field label="Valid ID Type & Number" value={formData.customerIdType} />
+            {/* Title */}
+            <div className="text-center my-6">
+              <h1 className="text-xl font-black text-black uppercase tracking-widest underline underline-offset-4">
+                Authority to Sell Vehicle
+              </h1>
             </div>
-          </section>
 
-          {/* Vehicle Information */}
-          <section className="mb-8">
-            <h2 className="font-black text-sm uppercase tracking-wide mb-1">Vehicle Information</h2>
-            <div className="space-y-1">
-              <Field label="Make/Brand" value={formData.vehicleMake} />
-              <Field label="Year Model" value={formData.vehicleYearModel} />
-              <Field label="Color" value={formData.vehicleColor} />
-              <Field label="Engine Number" value={formData.vehicleEngineNumber} />
-              <Field label="Chassis Number" value={formData.vehicleChassis} />
-            </div>
-          </section>
-
-          {/* Authority Given */}
-          <section className="mb-8">
-            <h2 className="font-black text-sm uppercase tracking-wide mb-3">Authority Given</h2>
-            <p className="text-sm leading-[2.2] text-gray-800">
-              I,{" "}
-              <span className="inline-block min-w-[220px] border-b border-gray-800 text-center font-bold">
-                {formData.customerName || ""}
-              </span>
-              , hereby authorize the above-named person to sell the vehicle described above on my behalf. This includes:
-              <br />
-              Talking to potential buyers, accepting payment, signing necessary sale documents, Releasing the vehicle and its documents.
-            </p>
-            <div className="flex items-baseline gap-2 mt-3 border-b border-gray-300 pb-1">
-              <span className="font-bold text-sm whitespace-nowrap">This authority is valid until:</span>
+            {/* Date */}
+            <div className="flex items-baseline gap-2 mb-8 border-b border-gray-300 pb-1">
+              <span className="font-bold text-sm">Date:</span>
               <span className="text-sm font-medium flex-1">
-                {formData.validUntil
-                  ? new Date(formData.validUntil).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                {formData.agreementDate
+                  ? new Date(formData.agreementDate).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
                   : ""}
               </span>
             </div>
-            <div className="border-b border-gray-400 mt-4" />
-          </section>
 
-          {/* Note */}
-          <section className="mb-6">
-            <h2 className="font-black text-sm uppercase tracking-wide mb-2">Note:</h2>
-            <p className="text-sm text-gray-800 leading-relaxed min-h-[40px] border-b border-gray-300 pb-2">
-              {formData.note}
-            </p>
-          </section>
+            {/* Owner's Information */}
+            <section className="mb-8">
+              <h2 className="font-black text-sm uppercase tracking-wide mb-1">Owner's Information</h2>
+              <div className="space-y-1">
+                <Field label="Full Name" value={formData.customerName} />
+                <Field label="Address" value={formData.customerAddress} />
+                <Field label="Contact Number" value={formData.customerPhone} />
+                <Field label="Valid ID Type & Number" value={formData.customerIdType} />
+              </div>
+            </section>
 
+            {/* Vehicle Information */}
+            <section className="mb-8">
+              <h2 className="font-black text-sm uppercase tracking-wide mb-1">Vehicle Information</h2>
+              <div className="space-y-1">
+                <Field label="Make/Brand" value={formData.vehicleMake} />
+                <Field label="Year Model" value={formData.vehicleYearModel} />
+                <Field label="Color" value={formData.vehicleColor} />
+                <Field label="Engine Number" value={formData.vehicleEngineNumber} />
+                <Field label="Chassis Number" value={formData.vehicleChassis} />
+              </div>
+            </section>
 
-          {/* Signatures */}
-          <section>
-            <h2 className="font-black text-sm uppercase tracking-wide mb-6">Signatures</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
-              {/* Owner */}
-              <div>
-                <p className="text-xs font-bold text-gray-600 mb-1">Owner's Signature:</p>
-                <div className="h-20 border-b border-gray-800 mb-2 flex items-end">
-                  {signature && (
-                    <img src={signature} alt="Owner Signature" className="max-h-16 object-contain" />
-                  )}
+            {/* Authority Given */}
+            <section className="mb-8">
+              <h2 className="font-black text-sm uppercase tracking-wide mb-3">Authority Given</h2>
+              <p className="text-sm leading-[2.2] text-gray-800">
+                I,{" "}
+                <span className="inline-block min-w-[220px] border-b border-gray-800 text-center font-bold">
+                  {formData.customerName || ""}
+                </span>
+                , hereby authorize the above-named person to sell the vehicle described above on my behalf. This includes:
+                <br />
+                Talking to potential buyers, accepting payment, signing necessary sale documents, Releasing the vehicle and its documents.
+              </p>
+              <div className="flex items-baseline gap-2 mt-3 border-b border-gray-300 pb-1">
+                <span className="font-bold text-sm whitespace-nowrap">This authority is valid until:</span>
+                <span className="text-sm font-medium flex-1">
+                  {formData.validUntil
+                    ? new Date(formData.validUntil).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })
+                    : ""}
+                </span>
+              </div>
+              <div className="border-b border-gray-400 mt-4" />
+            </section>
+
+            {/* Note */}
+            <section className="mb-6">
+              <h2 className="font-black text-sm uppercase tracking-wide mb-2">Note:</h2>
+              <p className="text-sm text-gray-800 leading-relaxed min-h-[40px] border-b border-gray-300 pb-2">
+                {formData.note}
+              </p>
+            </section>
+
+            {/* Signatures */}
+            <section>
+              <h2 className="font-black text-sm uppercase tracking-wide mb-6">Signatures</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16">
+                {/* Owner */}
+                <div>
+                  <p className="text-xs font-bold text-gray-600 mb-1">Owner's Signature:</p>
+                  <div className="h-20 border-b border-gray-800 mb-2 flex items-end">
+                    {signature && (
+                      <img src={signature} alt="Owner Signature" className="max-h-16 object-contain" />
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1 mb-2">
+                    <span className="text-xs font-bold">Name:</span>
+                    <span className="text-xs font-medium flex-1">{formData.customerName}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1">
+                    <span className="text-xs font-bold">Date:</span>
+                    <span className="text-xs font-medium flex-1">
+                      {formData.agreementDate
+                        ? new Date(formData.agreementDate).toLocaleDateString("en-GB")
+                        : ""}
+                    </span>
+                  </div>
                 </div>
-                <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1 mb-2">
-                  <span className="text-xs font-bold">Name:</span>
-                  <span className="text-xs font-medium flex-1">{formData.customerName}</span>
-                </div>
-                <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1">
-                  <span className="text-xs font-bold">Date:</span>
-                  <span className="text-xs font-medium flex-1">
-                    {formData.agreementDate
-                      ? new Date(formData.agreementDate).toLocaleDateString("en-GB")
-                      : ""}
-                  </span>
+
+                {/* BEE TEE Rep */}
+                <div>
+                  <p className="text-xs font-bold text-gray-600 mb-1">BEE TEE Representatives Signature:</p>
+                  <div className="h-20 border-b border-gray-800 mb-2 flex items-end">
+                    {repSignature && (
+                      <img src={repSignature} alt="Rep Signature" className="max-h-16 object-contain" />
+                    )}
+                  </div>
+                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1 mb-2">
+                    <span className="text-xs font-bold">Name:</span>
+                    <span className="text-xs font-medium flex-1">{formData.repName}</span>
+                  </div>
+                  <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1">
+                    <span className="text-xs font-bold">Date:</span>
+                    <span className="text-xs font-medium flex-1">
+                      {formData.repSignatureDate
+                        ? new Date(formData.repSignatureDate).toLocaleDateString("en-GB")
+                        : ""}
+                    </span>
+                  </div>
                 </div>
               </div>
-
-              {/* BEE TEE Rep */}
-              <div>
-                <p className="text-xs font-bold text-gray-600 mb-1">BEE TEE Representatives Signature:</p>
-                <div className="h-20 border-b border-gray-800 mb-2 flex items-end">
-                  {repSignature && (
-                    <img src={repSignature} alt="Rep Signature" className="max-h-16 object-contain" />
-                  )}
-                </div>
-                <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1 mb-2">
-                  <span className="text-xs font-bold">Name:</span>
-                  <span className="text-xs font-medium flex-1">{formData.repName}</span>
-                </div>
-                <div className="flex items-baseline gap-2 border-b border-gray-400 pb-1">
-                  <span className="text-xs font-bold">Date:</span>
-                  <span className="text-xs font-medium flex-1">
-                    {formData.repSignatureDate
-                      ? new Date(formData.repSignatureDate).toLocaleDateString("en-GB")
-                      : ""}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
-          <PrintFooter />
+            </section>
+            <PrintFooter />
+          </div>
         </div>
       </div>
     );

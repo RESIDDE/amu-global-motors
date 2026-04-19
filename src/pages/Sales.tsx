@@ -514,8 +514,8 @@ export default function Sales() {
             </div>
           )}
         </div>
-      )}
-    </div>
+      </div>
+    )}
 
     {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) closeDialog(); }}>
@@ -682,6 +682,7 @@ export default function Sales() {
         type="sale" 
         id={qrId} 
       />
-    </>
-  );
+    </div>
+  </>
+);
 }
