@@ -96,18 +96,20 @@ export default function Inquiries() {
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
-      const payload = {
+      const payload: any = {
         customer_id: form.customer_id || null,
         vehicle_id: form.vehicle_id || null,
         message: form.message,
         status: form.status,
-        manual_customer_name: form.manual_customer_name || null,
-        manual_customer_phone: form.manual_customer_phone || null,
-        manual_customer_email: form.manual_customer_email || null,
-        manual_vehicle_make: form.manual_vehicle_make || null,
-        manual_vehicle_model: form.manual_vehicle_model || null,
-        manual_vehicle_year: form.manual_vehicle_year || null,
       };
+
+      // Only add manual fields if they have values to avoid schema issues if columns don't exist yet
+      if (form.manual_customer_name) payload.manual_customer_name = form.manual_customer_name;
+      if (form.manual_customer_phone) payload.manual_customer_phone = form.manual_customer_phone;
+      if (form.manual_customer_email) payload.manual_customer_email = form.manual_customer_email;
+      if (form.manual_vehicle_make) payload.manual_vehicle_make = form.manual_vehicle_make;
+      if (form.manual_vehicle_model) payload.manual_vehicle_model = form.manual_vehicle_model;
+      if (form.manual_vehicle_year) payload.manual_vehicle_year = form.manual_vehicle_year;
       if (editId) {
         const { error } = await supabase.from("inquiries").update(payload as any).eq("id", editId);
         if (error) throw error;
@@ -358,20 +360,20 @@ export default function Inquiries() {
                 <div className="space-y-3">
                   <Input 
                     placeholder="Manual Customer Name" 
-                    value={form.manual_customer_name} 
+                    value={form.manual_customer_name || ""} 
                     onChange={(e) => setForm({ ...form, manual_customer_name: e.target.value, customer_id: "" })} 
                     className="rounded-xl h-10 bg-background/50 border-white/10"
                   />
                   <div className="grid grid-cols-2 gap-3">
                     <Input 
                       placeholder="Phone Number" 
-                      value={form.manual_customer_phone} 
+                      value={form.manual_customer_phone || ""} 
                       onChange={(e) => setForm({ ...form, manual_customer_phone: e.target.value, customer_id: "" })} 
                       className="rounded-xl h-10 bg-background/50 border-white/10"
                     />
                     <Input 
                       placeholder="Email Address" 
-                      value={form.manual_customer_email} 
+                      value={form.manual_customer_email || ""} 
                       onChange={(e) => setForm({ ...form, manual_customer_email: e.target.value, customer_id: "" })} 
                       className="rounded-xl h-10 bg-background/50 border-white/10"
                     />
@@ -412,19 +414,19 @@ export default function Inquiries() {
                   <div className="grid grid-cols-3 gap-3">
                     <Input 
                       placeholder="Year" 
-                      value={form.manual_vehicle_year} 
+                      value={form.manual_vehicle_year || ""} 
                       onChange={(e) => setForm({ ...form, manual_vehicle_year: e.target.value, vehicle_id: "" })} 
                       className="rounded-xl h-10 bg-background/50 border-white/10"
                     />
                     <Input 
                       placeholder="Make (e.g. Toyota)" 
-                      value={form.manual_vehicle_make} 
+                      value={form.manual_vehicle_make || ""} 
                       onChange={(e) => setForm({ ...form, manual_vehicle_make: e.target.value, vehicle_id: "" })} 
                       className="rounded-xl h-10 bg-background/50 border-white/10"
                     />
                     <Input 
                       placeholder="Model" 
-                      value={form.manual_vehicle_model} 
+                      value={form.manual_vehicle_model || ""} 
                       onChange={(e) => setForm({ ...form, manual_vehicle_model: e.target.value, vehicle_id: "" })} 
                       className="rounded-xl h-10 bg-background/50 border-white/10"
                     />
