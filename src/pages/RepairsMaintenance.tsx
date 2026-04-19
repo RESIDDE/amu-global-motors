@@ -15,8 +15,12 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import { 
-  ChevronRight, ArrowRight, Receipt, ClipboardCheck, Wrench, PlusCircle, Clock, DollarSign, PieChart as PieChartIcon, Search, Car, Pencil, QrCode, FileOutput, Trash2, History as HistoryIcon 
+  ChevronRight, ArrowRight, Receipt, ClipboardCheck, Wrench, PlusCircle, Clock, DollarSign, PieChart as PieChartIcon, Search, Car, Pencil, QrCode, FileOutput, Trash2, History as HistoryIcon, Download 
 } from "lucide-react";
+import { triggerPrint, downloadAsPNG } from "@/lib/exportHelpers";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination";
@@ -424,10 +428,10 @@ export default function RepairsMaintenance() {
     return null;
   };
 
-  const printBill = (r: Repair) => {
+  const getBillHTML = (r: Repair) => {
     const cust = customers.find(c => c.id === r.customer_id);
     const balance = (Number(r.repair_cost) || 0) - (Number(r.deposit_amount) || 0);
-    const html = `<html><head><title>Repair Bill</title>
+    return `<html><head><title>Repair Bill</title>
     <style>
       body { font-family: Arial, sans-serif; padding: 40px; max-width: 700px; margin: 0 auto; color: #333; }
       .row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #eee; font-size: 15px; }
@@ -460,13 +464,15 @@ export default function RepairsMaintenance() {
     <div class="footer">Thank you for your business!<br/><strong>AMU Global Motors Team</strong></div>
     ${getPrintFooterHTML()}
     </body></html>`;
-    const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); win.print(); }
   };
 
-  const printJobCard = (r: Repair) => {
+  const printBill = (r: Repair) => {
+    const html = getBillHTML(r);
+    triggerPrint(html);
+  };
+
+  const getJobCardHTML = (r: Repair) => {
     const cust = customers.find(c => c.id === r.customer_id);
-    const balance = (Number(r.repair_cost) || 0) - (Number(r.deposit_amount) || 0);
 
     const renderCheckboxes = (items: string[], allOptions: string[]) => {
       return allOptions.map(opt => `
@@ -479,7 +485,7 @@ export default function RepairsMaintenance() {
       `).join('');
     };
 
-    const html = `<html><head><title>Job Card - ${r.job_card_no || r.id}</title>
+    return `<html><head><title>Job Card - ${r.job_card_no || r.id}</title>
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
       body { font-family: 'Inter', sans-serif; padding: 20px; max-width: 850px; margin: 0 auto; color: #1a1a1a; line-height: 1.3; }
@@ -647,12 +653,15 @@ export default function RepairsMaintenance() {
       </div>
     </div>
 
-    <div class="footer-note">Thank you for choosing Bee Tee Autoshop. We appreciate your business!</div>
+    <div class="footer-note">Thank you for choosing AMU Global Motors. We appreciate your business!</div>
+    ${getPrintFooterHTML()}
     </body></html>`;
-    const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); win.print(); }
   };
 
+  const printJobCard = (r: Repair) => {
+    const html = getJobCardHTML(r);
+    triggerPrint(html);
+  };
   return (
     <div className="space-y-8 animate-fade-up pb-10 max-w-7xl mx-auto px-4 md:px-0">
       {/* Header Section */}
@@ -842,33 +851,48 @@ export default function RepairsMaintenance() {
                       </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex flex-wrap gap-2 mt-6 pt-4 border-t border-white/5 justify-end">
-                  <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-emerald-500/10 hover:text-emerald-500 text-muted-foreground transition-all" onClick={() => printBill(r)}>
-                    <Receipt className="h-3.5 w-3.5 mr-1.5" /> Bill
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-sky-500/10 hover:text-sky-500 text-muted-foreground transition-all" onClick={() => printJobCard(r)}>
-                    <ClipboardCheck className="h-3.5 w-3.5 mr-1.5" /> Job Card
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-foreground/10 hover:text-foreground text-muted-foreground transition-all" onClick={() => openEdit(r)}>
-                    <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-amber-500/10 hover:text-amber-500 text-muted-foreground transition-all" onClick={() => setQrId(r.id)}>
-                    <QrCode className="h-3.5 w-3.5 mr-1.5" /> QR Sign
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-indigo-500/10 hover:text-indigo-500 text-muted-foreground transition-all" onClick={() => openHistory(r)}>
-                    <HistoryIcon className="h-3.5 w-3.5 mr-1.5" /> History
-                  </Button>
-                  <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-sky-500/10 hover:text-sky-500 text-muted-foreground transition-all" title="Generate Invoice"
-                    onClick={() => {
-                      if (!r.customer_id) { toast.error("Assign a customer to this repair before invoicing"); return; }
-                      navigate(`/invoices?action=create&customer_id=${r.customer_id}&repair_id=${r.id}&type=repair`);
-                    }}
-                  ><FileOutput className="h-3.5 w-3.5 mr-1.5" /> Invoice</Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all" onClick={() => { if(window.confirm("Are you sure?")) deleteMut.mutate(r.id) }}>
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-white/5">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-amber-500/10 hover:text-amber-500 text-muted-foreground transition-all">
+                          <Download className="h-3.5 w-3.5 mr-1.5" /> Download
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
+                        <DropdownMenuItem onClick={() => triggerPrint(getJobCardHTML(r))} className="rounded-lg cursor-pointer">
+                          <ClipboardCheck className="mr-2 h-4 w-4 text-sky-500" /> Job Card (PDF)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => downloadAsPNG(getJobCardHTML(r), `job_card_${r.job_card_no || r.id}`)} className="rounded-lg cursor-pointer">
+                          <Download className="mr-2 h-4 w-4 text-sky-500" /> Job Card (PNG)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => triggerPrint(getBillHTML(r))} className="rounded-lg cursor-pointer border-t border-white/5 mt-1 pt-2">
+                          <Receipt className="mr-2 h-4 w-4 text-emerald-500" /> Repair Bill (PDF)
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => downloadAsPNG(getBillHTML(r), `bill_${r.job_card_no || r.id}`)} className="rounded-lg cursor-pointer">
+                          <Download className="mr-2 h-4 w-4 text-emerald-500" /> Repair Bill (PNG)
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-foreground/10 hover:text-foreground text-muted-foreground transition-all" onClick={() => openEdit(r)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1.5" /> Edit
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-amber-500/10 hover:text-amber-500 text-muted-foreground transition-all" onClick={() => setQrId(r.id)}>
+                      <QrCode className="h-3.5 w-3.5 mr-1.5" /> QR Sign
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-indigo-500/10 hover:text-indigo-500 text-muted-foreground transition-all" onClick={() => openHistory(r)}>
+                      <HistoryIcon className="h-3.5 w-3.5 mr-1.5" /> History
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-sky-500/10 hover:text-sky-500 text-muted-foreground transition-all" title="Generate Invoice"
+                      onClick={() => {
+                        if (!r.customer_id) { toast.error("Assign a customer to this repair before invoicing"); return; }
+                        navigate(`/invoices?action=create&customer_id=${r.customer_id}&repair_id=${r.id}&type=repair`);
+                      }}
+                    ><FileOutput className="h-3.5 w-3.5 mr-1.5" /> Invoice</Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all" onClick={() => { if(window.confirm("Are you sure?")) deleteMut.mutate(r.id) }}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

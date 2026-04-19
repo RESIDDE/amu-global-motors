@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/pagination";
 import { PlusCircle, Pencil, Trash2, Receipt, Download, FileText, Printer, FileOutput, DollarSign, Calendar, Search, Car, Users, QrCode, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { exportToCSV, exportToJSON, printTable } from "@/lib/exportHelpers";
+import { exportToCSV, exportToJSON, printTable, triggerPrint, downloadAsPNG } from "@/lib/exportHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 import { getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
@@ -239,13 +239,13 @@ export default function Sales() {
     ]);
   };
 
-  const printReceipt = (sale: any) => {
+  const getReceiptHTML = (sale: any) => {
     const cust = customerObjMap[sale.customer_id];
     const saleItems = sale.sale_vehicles?.length > 0 
       ? sale.sale_vehicles.map((sv: any) => vehicleMap[sv.vehicle_id] || "Unknown Vehicle")
       : [vehicleMap[sale.vehicle_id] || "Unknown Vehicle"];
 
-    const html = `<html><head><title>Receipt</title>
+    return `<html><head><title>Receipt</title>
     <style>
       body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; line-height: 1.5; color: #333; }
       .header { text-align: center; border-bottom: 2px solid #1a1a2e; padding-bottom: 20px; margin-bottom: 30px; }
@@ -319,8 +319,20 @@ export default function Sales() {
     </div>
     ${getPrintFooterHTML()}
     </body></html>`;
-    const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); win.print(); }
+  };
+
+  const printReceipt = (sale: any) => {
+    const html = getReceiptHTML(sale);
+    triggerPrint(html);
+  };
+
+  const handleDownloadPDF = (sale: any) => {
+    printReceipt(sale);
+  };
+
+  const handleDownloadPNG = async (sale: any) => {
+    const html = getReceiptHTML(sale);
+    await downloadAsPNG(html, `receipt_${sale.id.slice(0, 8)}`);
   };
 
   return (
@@ -423,6 +435,21 @@ export default function Sales() {
                           <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-foreground/20 text-amber-500" onClick={() => setQrId(s.id)}>
                             <QrCode className="h-4 w-4 mr-1.5" /> Sign Link
                           </Button>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-foreground/20 text-sky-500">
+                                <Download className="h-4 w-4 mr-1.5" /> Download
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10">
+                              <DropdownMenuItem onClick={() => handleDownloadPDF(s)} className="rounded-lg cursor-pointer">
+                                <Printer className="mr-2 h-4 w-4" /> Download as PDF
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => handleDownloadPNG(s)} className="rounded-lg cursor-pointer">
+                                <Download className="mr-2 h-4 w-4" /> Download as PNG
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                           <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-foreground/20" onClick={() => printReceipt(s)}>
                             <Receipt className="h-4 w-4 mr-1.5" /> Receipt
                           </Button>

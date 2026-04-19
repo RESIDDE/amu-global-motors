@@ -7,14 +7,22 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad } from "@/components/SignaturePad";
-import { Printer, FileText, CheckCircle2, History, Search, Calendar as CalendarIcon, ArrowLeft, Trash2, PlusCircle, Users, Car, Pencil } from "lucide-react";
+import { Printer, FileText, CheckCircle2, History, Search, Calendar as CalendarIcon, ArrowLeft, Trash2, PlusCircle, Users, Car, Pencil, Download } from "lucide-react";
+import { downloadAsPNG } from "@/lib/exportHelpers";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
-import { PrintHeader, PrintWatermark } from "@/components/PrintHeader";
-import { PrintFooter } from "@/components/PrintFooter";
+import { PrintHeader, PrintWatermark, getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
+import { PrintFooter, getPrintFooterHTML } from "@/components/PrintFooter";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
+import { triggerPrint } from "@/lib/exportHelpers";
 
 type ATS = {
   id: string;
@@ -74,8 +82,77 @@ export default function AuthorityToSell() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const getATSHTML = (data: typeof formData, sig: string, repSig: string) => {
+    return `<html><head><title>Authority to Sell - ${data.customerName}</title>
+    <style>
+      body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; line-height: 1.5; }
+      .title { text-align: center; margin: 30px 0; font-size: 20px; font-weight: 800; text-transform: uppercase; text-decoration: underline; letter-spacing: 1px; }
+      .section { margin-bottom: 25px; }
+      .section-title { font-weight: 800; font-size: 14px; text-transform: uppercase; margin-bottom: 10px; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+      .field { display: flex; border-bottom: 1px solid #f0f0f0; padding: 6px 0; font-size: 14px; }
+      .label { font-weight: 700; width: 220px; color: #555; }
+      .value { flex: 1; font-weight: 600; }
+      .signature-area { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+      .sig-box { border-bottom: 1px solid #333; height: 80px; display: flex; align-items: flex-end; margin-bottom: 10px; }
+      .sig-img { max-height: 70px; object-fit: contain; }
+      .footer-note { font-size: 12px; color: #777; text-align: center; margin-top: 50px; }
+      @media print { body { padding: 20px; } }
+    </style></head><body>
+    ${getPrintWatermarkHTML()}
+    ${getPrintHeaderHTML()}
+    <div class="title">Authority to Sell Vehicle</div>
+    <div class="field"><span class="label">Date:</span> <span class="value">${data.agreementDate ? new Date(data.agreementDate).toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span></div>
+    
+    <div class="section" style="margin-top: 30px;">
+      <div class="section-title">Owner's Information</div>
+      <div class="field"><span class="label">Full Name:</span> <span class="value">${data.customerName}</span></div>
+      <div class="field"><span class="label">Address:</span> <span class="value">${data.customerAddress}</span></div>
+      <div class="field"><span class="label">Contact Number:</span> <span class="value">${data.customerPhone}</span></div>
+      <div class="field"><span class="label">Valid ID Type & Number:</span> <span class="value">${data.customerIdType}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Vehicle Information</div>
+      <div class="field"><span class="label">Make/Brand:</span> <span class="value">${data.vehicleMake}</span></div>
+      <div class="field"><span class="label">Year Model:</span> <span class="value">${data.vehicleYearModel}</span></div>
+      <div class="field"><span class="label">Color:</span> <span class="value">${data.vehicleColor}</span></div>
+      <div class="field"><span class="label">Engine Number:</span> <span class="value">${data.vehicleEngineNumber}</span></div>
+      <div class="field"><span class="label">Chassis Number:</span> <span class="value">${data.vehicleChassis}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Authority Given</div>
+      <p style="font-size: 14px; line-height: 2;">
+        I, <strong>${data.customerName || "____________________"}</strong>, hereby authorize the above-named person to sell the vehicle described above on my behalf. This includes: Talking to potential buyers, accepting payment, signing necessary sale documents, Releasing the vehicle and its documents.
+      </p>
+      <div class="field"><span class="label">This authority is valid until:</span> <span class="value">${data.validUntil ? new Date(data.validUntil).toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' }) : ''}</span></div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Note:</div>
+      <p style="font-size: 14px; border-bottom: 1px solid #eee; padding-bottom: 10px;">${data.note || "N/A"}</p>
+    </div>
+
+    <div class="signature-area">
+      <div>
+        <div class="sig-box">${sig ? `<img src="${sig}" class="sig-img" />` : ''}</div>
+        <div style="font-size: 12px; font-weight: 700;">Owner's Signature</div>
+        <div style="font-size: 12px;">Name: ${data.customerName}</div>
+      </div>
+      <div>
+        <div class="sig-box">${repSig ? `<img src="${repSig}" class="sig-img" />` : ''}</div>
+        <div style="font-size: 12px; font-weight: 700;">Representative Signature</div>
+        <div style="font-size: 12px;">Name: ${data.repName}</div>
+      </div>
+    </div>
+
+    ${getPrintFooterHTML()}
+    </body></html>`;
+  };
+
   const handlePrint = () => {
-    window.print();
+    const html = getATSHTML(formData, signature, repSignature);
+    triggerPrint(html);
   };
 
   // ── Queries ──────────────────────────────────────────────────────────────
@@ -250,9 +327,24 @@ export default function AuthorityToSell() {
           <Button variant="outline" onClick={() => setMode("edit")} className="rounded-xl gap-2 font-medium">
             <ArrowLeft className="w-4 h-4" /> Back to Editor
           </Button>
-          <Button onClick={handlePrint} className="rounded-xl gap-2 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20 font-semibold px-6">
-            <Printer className="w-4 h-4" /> Print Document
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button className="rounded-xl gap-2 bg-sky-500 hover:bg-sky-600 text-white shadow-lg shadow-sky-500/20 font-semibold px-6">
+                <Download className="w-4 h-4" /> Download
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
+              <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer">
+                <Printer className="mr-2 h-4 w-4 text-sky-500" /> Print / PDF
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => downloadAsPNG(getATSHTML(formData, signature, repSignature), `ats_${formData.customerName.replace(/\s+/g, '_')}`)}
+                className="rounded-lg cursor-pointer"
+              >
+                <Download className="mr-2 h-4 w-4 text-sky-500" /> Download PNG
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
 
         {/* Printable Document */}
@@ -653,14 +745,43 @@ export default function AuthorityToSell() {
                           </TableCell>
                           <TableCell className="text-right px-6">
                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => viewHistoryItem(item)}
-                                className="h-10 rounded-xl hover:bg-sky-500/10 hover:text-sky-500 font-bold px-4"
-                              >
-                                <Printer className="w-4 h-4 mr-2" /> View & Print
-                              </Button>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-10 rounded-xl hover:bg-sky-500/10 hover:text-sky-500 font-bold px-4"
+                                  >
+                                    <Download className="w-4 h-4 mr-2" /> Download
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
+                                  <DropdownMenuItem onClick={() => viewHistoryItem(item)} className="rounded-lg cursor-pointer">
+                                    <Printer className="mr-2 h-4 w-4 text-sky-500" /> View & Print (PDF)
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem 
+                                    onClick={() => downloadAsPNG(getATSHTML({
+                                      agreementDate: item.agreement_date,
+                                      customerName: item.customer_name,
+                                      customerAddress: item.customer_address,
+                                      customerPhone: item.customer_phone,
+                                      customerIdType: item.customer_id_type,
+                                      vehicleMake: item.vehicle_make,
+                                      vehicleYearModel: item.vehicle_year_model,
+                                      vehicleColor: item.vehicle_color,
+                                      vehicleEngineNumber: item.vehicle_engine_number,
+                                      vehicleChassis: item.vehicle_chassis,
+                                      validUntil: item.valid_until,
+                                      note: item.note,
+                                      repName: item.rep_name,
+                                      repSignatureDate: item.rep_signature_date
+                                    }, item.signature, item.rep_signature), `ats_${item.customer_name.replace(/\s+/g, '_')}`)}
+                                    className="rounded-lg cursor-pointer"
+                                  >
+                                    <Download className="mr-2 h-4 w-4 text-sky-500" /> Download PNG
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                               {hasEdit && (
                                 <>
                                   <Button

@@ -23,7 +23,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { PlusCircle, FileText, Printer, Trash2, Receipt, Search } from "lucide-react";
+import { PlusCircle, FileText, Printer, Trash2, Receipt, Search, Download } from "lucide-react";
+import { triggerPrint, downloadAsPNG } from "@/lib/exportHelpers";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 
@@ -183,7 +187,7 @@ export default function Invoices() {
     return "Repair";
   };
 
-  const printInvoice = (inv: any) => {
+  const getInvoiceHTML = (inv: any) => {
     const cust = customerMap[inv.customer_id];
     const sale = sales.find((s) => s.id === inv.sale_id);
 
@@ -196,7 +200,7 @@ export default function Invoices() {
       ? `${(sale as any).vehicles?.year || ""} ${(sale as any).vehicles?.make || ""} ${(sale as any).vehicles?.model || ""}`.trim()
       : "";
 
-    const html = `<html><head><title>Invoice ${inv.invoice_number}</title>
+    return `<html><head><title>Invoice ${inv.invoice_number}</title>
     <style>
       * { margin: 0; padding: 0; box-sizing: border-box; }
       body { font-family: 'Segoe UI', Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; color: #333; }
@@ -247,8 +251,20 @@ export default function Invoices() {
     <div class="footer"><p>Thank you for your business!</p><p>AMU Global Motors — Professional Auto Sales & Services</p></div>
     ${getPrintFooterHTML()}
     </body></html>`;
-    const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); win.print(); }
+  };
+
+  const printInvoice = (inv: any) => {
+    const html = getInvoiceHTML(inv);
+    triggerPrint(html);
+  };
+
+  const handleDownloadPDF = (inv: any) => {
+    printInvoice(inv);
+  };
+
+  const handleDownloadPNG = async (inv: any) => {
+    const html = getInvoiceHTML(inv);
+    await downloadAsPNG(html, `invoice_${inv.invoice_number}`);
   };
 
   const customerSales = form.customer_id ? sales.filter((s) => s.customer_id === form.customer_id) : [];
@@ -342,10 +358,25 @@ export default function Invoices() {
                     </div>
                   </div>
 
-                  <div className="flex gap-2 mt-6 pt-4 border-t border-white/5 justify-end">
+                  <div className="flex gap-1 mt-6 pt-4 border-t border-white/5 justify-end">
                     <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-cyan-500/10 hover:text-cyan-500 text-muted-foreground transition-all" onClick={() => printInvoice(inv)}>
                       <Printer className="h-3.5 w-3.5 mr-1.5" /> Print
                     </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 rounded-lg hover:bg-cyan-500/10 hover:text-cyan-500 text-muted-foreground transition-all">
+                          <Download className="h-3.5 w-3.5 mr-1.5" /> Download
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent className="rounded-xl glass-panel p-2 shadow-2xl border-white/10" align="end">
+                        <DropdownMenuItem onClick={() => handleDownloadPDF(inv)} className="rounded-lg cursor-pointer">
+                          <Printer className="mr-2 h-4 w-4" /> Download PDF
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDownloadPNG(inv)} className="rounded-lg cursor-pointer">
+                          <Download className="mr-2 h-4 w-4" /> Download PNG
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                     {hasEdit && (
                       <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all" onClick={() => setDeleteId(inv.id)}>
                         <Trash2 className="h-3.5 w-3.5" />

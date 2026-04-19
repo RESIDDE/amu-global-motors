@@ -4,14 +4,14 @@ import { MapPin, Phone, Mail } from "lucide-react";
 // For use inside React DOM trees (like AuthorityToSell.tsx)
 export function PrintHeader() {
   return (
-    <div className="flex items-start justify-start pb-4 mb-6 relative border-b-2 border-black/10">
-      <img src={logo} alt="AMU Logo" className="w-[140px] h-[140px] object-contain mr-6 mt-2" />
+    <div className="flex items-start justify-start pb-2 mb-4 relative border-b-2 border-black/10">
+      <img src={logo} alt="AMU Logo" className="w-[110px] h-[110px] object-contain mr-6 mt-0" />
       <div className="flex-1 text-left relative">
         <div className="absolute top-0 right-0">
-          <span className="text-[13px] font-black text-black font-sans uppercase">RC 1860127</span>
+          <span className="text-[12px] font-black text-black font-sans uppercase">RC 1860127</span>
         </div>
         <h1 
-          className="font-serif font-black text-[34px] mt-3 mb-1 tracking-wide" 
+          className="font-serif font-black text-[30px] mt-1 mb-0.5 tracking-wide" 
           style={{ 
             color: '#c99a4e',
             WebkitTextStroke: '0.8px #222',
@@ -20,21 +20,21 @@ export function PrintHeader() {
         >
           A.M.U GLOBAL MOTORS NIG. LTD.
         </h1>
-        <p className="text-[15px] font-black mb-3 text-black leading-snug font-sans tracking-[0.2px]">
+        <p className="text-[13px] font-black mb-2 text-black leading-snug font-sans tracking-[0.2px]">
           Dealer in all kind of Motors Cars, Import & Export, Car Hire,<br />
           Supplies, General Contractor, Merchandise.
         </p>
-        <div className="space-y-[6px] mt-4 text-[14px] font-bold text-black border-l-2 border-[#d81b60]/20 pl-3">
-          <div className="flex items-start gap-1.5">
-            <span className="text-[#d81b60] shrink-0 mt-0.5"><MapPin size={18} fill="currentColor" strokeWidth={1} className="text-white"/></span>
-            <span>:263 Tafawa Balewa Road, Central<br/>Business District Area Abuja, Nigeria.</span>
+        <div className="space-y-[4px] mt-2 text-[13px] font-bold text-black border-l-2 border-[#d81b60]/20 pl-3">
+          <div className="flex items-start gap-1.5 leading-tight">
+            <span className="text-[#d81b60] shrink-0 mt-0.5"><MapPin size={16} fill="currentColor" strokeWidth={1} className="text-white"/></span>
+            <span>:263 Tafawa Balewa Road, Central District Abuja, Nigeria.</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="text-[#d81b60] shrink-0"><Phone size={18} fill="currentColor" strokeWidth={1} className="text-white"/></span>
+          <div className="flex items-center gap-1.5 h-4">
+            <span className="text-[#d81b60] shrink-0"><Phone size={16} fill="currentColor" strokeWidth={1} className="text-white"/></span>
             <span className="font-extrabold tracking-wide">:0803 628 8314</span>
           </div>
-          <div className="flex items-center gap-1.5 font-semibold">
-            <span className="text-[#d81b60] shrink-0"><Mail size={18} fill="currentColor" strokeWidth={1} className="text-[#d81b60]"/></span>
+          <div className="flex items-center gap-1.5 h-4 font-semibold">
+            <span className="text-[#d81b60] shrink-0"><Mail size={16} fill="currentColor" strokeWidth={1} className="text-[#d81b60]"/></span>
             <span>:amuglobalmotors@gmail.com</span>
           </div>
         </div>
@@ -46,29 +46,29 @@ export function PrintHeader() {
 // For use inside string-based html window popups (like Invoices.tsx, Sales.tsx, exportHelpers.ts)
 export function getPrintHeaderHTML() {
   return `
-    <div style="display: flex; align-items: flex-start; justify-content: flex-start; padding-bottom: 16px; margin-bottom: 24px; position: relative; border-bottom: 2px solid rgba(0,0,0,0.1);">
-      <img src="${window.location.origin}${logo}" style="width: 140px; height: 140px; object-fit: contain; margin-right: 24px; margin-top: 8px;" />
+    <div style="display: flex; align-items: flex-start; justify-content: flex-start; padding-bottom: 8px; margin-bottom: 12px; position: relative; border-bottom: 2px solid rgba(0,0,0,0.1);">
+      <img src="${window.location.origin}${logo}" style="width: 110px; height: 110px; object-fit: contain; margin-right: 20px; margin-top: 0px;" />
       <div style="flex: 1; text-align: left; position: relative;">
-        <div style="position: absolute; top: -10px; right: 0;">
-          <span style="font-size: 13px; font-weight: 900; color: #000; font-family: sans-serif;">RC 1860127</span>
+        <div style="position: absolute; top: -5px; right: 0;">
+          <span style="font-size: 11px; font-weight: 900; color: #000; font-family: sans-serif;">RC 1860127</span>
         </div>
-        <h1 style="font-family: Georgia, serif; font-size: 34px; font-weight: 900; margin: 12px 0 6px 0; color: #c99a4e; -webkit-text-stroke: 0.8px #222; letter-spacing: 0.5px;">
+        <h1 style="font-family: Georgia, serif; font-size: 30px; font-weight: 900; margin: 4px 0 2px 0; color: #c99a4e; -webkit-text-stroke: 0.8px #222; letter-spacing: 0.4px;">
           A.M.U GLOBAL MOTORS NIG. LTD.
         </h1>
-        <p style="font-family: sans-serif; font-size: 15px; font-weight: 900; margin: 0 0 16px 0; color: #000; line-height: 1.4; letter-spacing: 0.2px;">
+        <p style="font-family: sans-serif; font-size: 13px; font-weight: 900; margin: 0 0 8px 0; color: #000; line-height: 1.2; letter-spacing: 0.1px;">
           Dealer in all kind of Motors Cars, Import & Export, Car Hire,<br/>Supplies, General Contractor, Merchandise.
         </p>
-        <div style="margin-top: 12px; font-size: 14px; color: #000; font-family: sans-serif; font-weight: bold; padding-left: 12px; border-left: 2px solid rgba(216, 27, 96, 0.2);">
-          <div style="display: flex; align-items: flex-start; margin-bottom: 6px;">
-            <span style="color: #d81b60; margin-right: 6px; font-size: 16px;">📍</span>
-            <span>:263 Tafawa Balewa Road, Central<br/>Business District Area Abuja, Nigeria.</span>
+        <div style="margin-top: 8px; font-size: 13px; color: #000; font-family: sans-serif; font-weight: bold; padding-left: 12px; border-left: 2px solid rgba(216, 27, 96, 0.2);">
+          <div style="display: flex; align-items: flex-start; margin-bottom: 3px;">
+            <span style="color: #d81b60; margin-right: 4px; font-size: 14px;">📍</span>
+            <span>:263 Tafawa Balewa Road, Central District Abuja, Nigeria.</span>
           </div>
-          <div style="display: flex; align-items: center; margin-bottom: 6px; font-weight: 900; letter-spacing: 0.5px;">
-            <span style="color: #d81b60; margin-right: 6px; font-size: 16px;">📱</span>
+          <div style="display: flex; align-items: center; margin-bottom: 3px; font-weight: 900; letter-spacing: 0.4px;">
+            <span style="color: #d81b60; margin-right: 4px; font-size: 14px;">📱</span>
             <span>:0803 628 8314</span>
           </div>
-          <div style="display: flex; align-items: center; margin-bottom: 6px; font-weight: 600;">
-            <span style="color: #d81b60; margin-right: 6px; font-size: 16px;">✉️</span>
+          <div style="display: flex; align-items: center; margin-bottom: 0px; font-weight: 600;">
+            <span style="color: #d81b60; margin-right: 4px; font-size: 14px;">✉️</span>
             <span>:amuglobalmotors@gmail.com</span>
           </div>
         </div>
