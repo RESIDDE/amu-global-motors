@@ -310,8 +310,8 @@ export default function AuthorityToSell() {
   const Field = ({ label, value }: { label: string; value: string }) => (
     <div className="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-2 py-2 sm:py-1 border-b border-gray-200">
       <span className="font-bold text-[13px] sm:text-sm text-gray-800 shrink-0">{label}:</span>
-      <span className="flex-1 text-[13px] sm:text-sm text-gray-900 font-medium break-words">
-        {value || <span className="text-transparent select-none">{"_".repeat(30)}</span>}
+      <span className="flex-1 text-[13px] sm:text-sm text-gray-900 font-medium break-words leading-relaxed">
+        {value || <span className="text-transparent select-none">{"_".repeat(20)}</span>}
       </span>
     </div>
   );
@@ -347,17 +347,12 @@ export default function AuthorityToSell() {
           </DropdownMenu>
         </div>
 
-        {/* Printable Document */}
-        <div
-          ref={documentRef}
-          className="bg-white text-black rounded-3xl shadow-2xl border border-gray-100 print:shadow-none print:border-none print:rounded-none overflow-hidden mx-auto"
-          style={{ 
-            minHeight: window.innerWidth > 640 ? "1056px" : "auto", 
-            padding: window.innerWidth > 640 ? "48px 56px" : "24px 20px",
-            width: "100%",
-            maxWidth: "100%"
-          }}
-        >
+        {/* Printable Document Container with Scaling for small screens */}
+        <div className="w-full overflow-hidden flex justify-center">
+          <div
+            ref={documentRef}
+            className="bg-white text-black rounded-xl sm:rounded-3xl shadow-2xl border border-gray-100 print:shadow-none print:border-none print:rounded-none overflow-hidden h-auto sm:min-h-[1056px] p-6 sm:p-14 w-full max-w-full sm:w-auto"
+          >
           <PrintWatermark />
           <PrintHeader />
 

@@ -403,7 +403,8 @@ export default function Sales() {
         <div className="space-y-6">
           <div className="bento-card overflow-hidden">
             <div className="overflow-x-auto w-full">
-              <Table className="w-full">
+              <div className="min-w-[800px]">
+                <Table className="w-full">
                 <TableHeader className="bg-foreground/5 pointer-events-none">
                   <TableRow className="border-border/50 hover:bg-transparent">
                     <TableHead className="font-semibold px-6 py-4">Vehicle</TableHead>

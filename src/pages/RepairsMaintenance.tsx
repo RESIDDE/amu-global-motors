@@ -1245,7 +1245,7 @@ export default function RepairsMaintenance() {
                                </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4 text-sm mt-4 border-t border-white/5 pt-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm mt-4 border-t border-white/5 pt-4">
                                {h.replacement_parts && (
                                   <div>
                                      <p className="text-[10px] font-bold text-muted-foreground uppercase mb-1">Parts Replaced</p>
