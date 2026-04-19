@@ -58,7 +58,7 @@ export default function Inquiries() {
     queryFn: async () => {
       const { data, error } = await supabase.from("inquiries").select("*").order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
@@ -109,10 +109,10 @@ export default function Inquiries() {
         manual_vehicle_year: form.manual_vehicle_year || null,
       };
       if (editId) {
-        const { error } = await supabase.from("inquiries").update(payload).eq("id", editId);
+        const { error } = await supabase.from("inquiries").update(payload as any).eq("id", editId);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("inquiries").insert(payload);
+        const { error } = await supabase.from("inquiries").insert(payload as any);
         if (error) throw error;
       }
     },
