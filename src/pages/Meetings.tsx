@@ -15,7 +15,7 @@ import {
   Calendar, Users, FileText, CheckCircle2, XCircle, Clock, 
   ExternalLink, Search, Download, Trash2, Mail, Phone,
   ChevronRight, BadgeCheck, MessageSquare, AlertCircle,
-  Copy, Plus, Eye
+  Copy, Plus, Eye, Upload, X
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,6 +42,7 @@ export default function Meetings() {
     intent: "",
     bookingDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
   });
+  const [adminFile, setAdminFile] = useState<File | null>(null);
 
   const queryClient = useQueryClient();
 
@@ -57,10 +58,27 @@ export default function Meetings() {
 
   const addMeetingMutation = useMutation({
     mutationFn: async (payload: any) => {
+      let proposalUrl = "";
+
+      // 1. Upload file if exists
+      if (adminFile) {
+        const fileExt = adminFile.name.split('.').pop();
+        const fileName = `${Math.random().toString(36).substring(2)}_${Date.now()}.${fileExt}`;
+        const filePath = `admin_submissions/${fileName}`;
+
+        const { error: uploadError } = await (supabase as any).storage
+          .from('proposals')
+          .upload(filePath, adminFile);
+
+        if (uploadError) throw new Error("Failed to upload proposal: " + uploadError.message);
+        proposalUrl = filePath;
+      }
+
       const { error } = await (supabase as any).from("meetings").insert([{
         full_name: payload.fullName,
         contact_info: `Phone: ${payload.phone} | Email: ${payload.email}`,
         intent: payload.intent,
+        proposal_url: proposalUrl,
         booking_date: new Date(payload.bookingDate).toISOString(),
         status: 'Approved'
       }]);
@@ -70,6 +88,7 @@ export default function Meetings() {
       queryClient.invalidateQueries({ queryKey: ["meetings"] });
       toast.success("Meeting logged successfully");
       setIsAddingMeeting(false);
+      setAdminFile(null);
       setNewMeeting({
         fullName: "",
         phone: "",
@@ -391,6 +410,29 @@ export default function Meetings() {
              <div className="space-y-2">
                 <Label>Meeting Date & Time</Label>
                 <Input type="datetime-local" value={newMeeting.bookingDate} onChange={e => setNewMeeting({...newMeeting, bookingDate: e.target.value})} className="rounded-xl bg-white/5 border-white/10 [color-scheme:dark]" />
+             </div>
+
+             <div className="space-y-2">
+                <Label>Attach Document / Proposal (Optional)</Label>
+                <div className="flex items-center gap-3 p-4 rounded-xl bg-white/5 border border-dashed border-white/10 hover:border-amber-500/50 transition-all cursor-pointer relative">
+                   <input 
+                     type="file" 
+                     className="absolute inset-0 opacity-0 cursor-pointer" 
+                     onChange={(e) => setAdminFile(e.target.files?.[0] || null)}
+                   />
+                   <div className="h-10 w-10 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500">
+                      <Upload className="h-5 w-5" />
+                   </div>
+                   <div className="flex-1 truncate">
+                      <p className="text-xs font-bold truncate">{adminFile ? adminFile.name : "Select a file to upload"}</p>
+                      <p className="text-[10px] text-muted-foreground">{adminFile ? `${(adminFile.size / 1024 / 1024).toFixed(2)} MB` : "PDF, DOCX, Images, etc."}</p>
+                   </div>
+                   {adminFile && (
+                     <Button type="button" variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setAdminFile(null); }} className="h-8 w-8 rounded-full">
+                        <X className="h-4 w-4" />
+                     </Button>
+                   )}
+                </div>
              </div>
           </div>
 
