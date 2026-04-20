@@ -15,26 +15,31 @@ CREATE TABLE IF NOT EXISTS public.meetings (
 ALTER TABLE public.meetings ENABLE ROW LEVEL SECURITY;
 
 -- Policies for meetings
+DROP POLICY IF EXISTS "Enable insert for everyone" ON public.meetings;
 CREATE POLICY "Enable insert for everyone" ON public.meetings FOR INSERT WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Enable all access for authenticated users" ON public.meetings;
 CREATE POLICY "Enable all access for authenticated users" ON public.meetings FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
--- Storage bucket for proposals (Note: User may need to manually enable this in Supabase dashboard)
--- We attempt to insert, but policies are the key part.
+-- Storage bucket for proposals
 INSERT INTO storage.buckets (id, name, public) 
 VALUES ('proposals', 'proposals', false)
 ON CONFLICT (id) DO NOTHING;
 
 -- Storage Policies for proposals
+DROP POLICY IF EXISTS "Public Upload" ON storage.objects;
 CREATE POLICY "Public Upload"
 ON storage.objects FOR INSERT
 TO public
 WITH CHECK (bucket_id = 'proposals');
 
+DROP POLICY IF EXISTS "Authenticated Read" ON storage.objects;
 CREATE POLICY "Authenticated Read"
 ON storage.objects FOR SELECT
 TO authenticated
 USING (bucket_id = 'proposals');
 
+DROP POLICY IF EXISTS "Authenticated Manage" ON storage.objects;
 CREATE POLICY "Authenticated Manage"
 ON storage.objects FOR ALL
 TO authenticated

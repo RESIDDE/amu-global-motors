@@ -52,12 +52,16 @@ export default function PublicBooking() {
           .upload(filePath, file);
 
         if (uploadError) throw new Error("Failed to upload proposal: " + uploadError.message);
-
-        // Get public URL (or private if protected, but here we store the path)
         proposalUrl = filePath;
       }
 
-      // 2. Insert into meetings table
+      // 2. Validate Date
+      const bookingDate = new Date(formData.bookingDate);
+      if (isNaN(bookingDate.getTime())) {
+        throw new Error("Please select a valid meeting date.");
+      }
+
+      // 3. Insert into meetings table
       const { error: insertError } = await (supabase as any)
         .from('meetings')
         .insert([{
@@ -65,7 +69,7 @@ export default function PublicBooking() {
           contact_info: `Phone: ${formData.phone} | Email: ${formData.email}`,
           intent: formData.intent,
           proposal_url: proposalUrl,
-          booking_date: new Date(formData.bookingDate).toISOString(),
+          booking_date: bookingDate.toISOString(),
           status: 'Pending'
         }]);
 
@@ -83,16 +87,16 @@ export default function PublicBooking() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-6 text-center">
         <div 
-          className="glass-panel p-12 rounded-[2.5rem] border border-white/5 shadow-2xl max-w-lg w-full relative overflow-hidden animate-in fade-in zoom-in-95 duration-700"
+          className="bg-white p-12 rounded-[2.5rem] border border-gray-200 shadow-2xl max-w-lg w-full relative overflow-hidden animate-in fade-in zoom-in-95 duration-700"
         >
           <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
           <div className="bg-emerald-500/20 p-6 rounded-full w-fit mx-auto mb-8 relative">
             <CheckCircle2 className="h-16 w-16 text-emerald-500" />
           </div>
-          <h2 className="text-4xl font-black mb-4 tracking-tight">Request Received!</h2>
-          <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
+          <h2 className="text-4xl font-black mb-4 tracking-tight text-gray-900">Request Received!</h2>
+          <p className="text-gray-500 text-lg mb-10 leading-relaxed">
             Thank you for reaching out to Amu Global Motors. Our team will review your proposal and get back to you shortly.
           </p>
           <Button 
@@ -108,24 +112,24 @@ export default function PublicBooking() {
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] text-foreground relative overflow-hidden selection:bg-amber-500/30">
+    <div className="min-h-screen bg-gray-50 text-gray-900 relative overflow-hidden selection:bg-amber-500/30">
       {/* Background Decorative Elements */}
       <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-amber-500/5 rounded-full blur-[120px] pointer-events-none" />
       <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-blue-500/5 rounded-full blur-[120px] pointer-events-none" />
       
-      <header className="p-8 md:p-12 z-20 sticky top-0 bg-black/20 backdrop-blur-md border-b border-white/5">
+      <header className="p-6 md:p-10 z-20 sticky top-0 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <img src={logo} alt="AMU Logo" className="h-12 w-12 rounded-2xl object-contain bg-white/5 p-1 border border-white/10" />
+            <img src={logo} alt="AMU Logo" className="h-12 w-12 rounded-2xl object-contain bg-gray-100 p-1 border border-gray-200" />
             <div>
-              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none">AMU GLOBAL</h1>
+              <h1 className="text-2xl font-black tracking-tighter uppercase leading-none text-gray-900">AMU GLOBAL</h1>
               <p className="text-[10px] uppercase font-bold tracking-[0.3em] text-amber-500 mt-1">Motors & Logistics</p>
             </div>
           </div>
           <div className="hidden md:flex gap-6 items-center">
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Professional Inquiries</span>
-            <div className="h-1 w-1 rounded-full bg-white/20" />
-            <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Partnership Proposals</span>
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Professional Inquiries</span>
+            <div className="h-1 w-1 rounded-full bg-gray-300" />
+            <span className="text-xs font-bold uppercase tracking-widest text-gray-400">Partnership Proposals</span>
           </div>
         </div>
       </header>
@@ -133,98 +137,98 @@ export default function PublicBooking() {
       <main className="max-w-7xl mx-auto px-6 py-16 md:py-24 grid grid-cols-1 lg:grid-cols-2 gap-16 items-start relative z-10">
         <div className="space-y-10 animate-fade-up">
           <div className="space-y-4">
-            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-500 text-xs font-bold uppercase tracking-widest border border-amber-500/20">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 text-amber-600 text-xs font-bold uppercase tracking-widest border border-amber-500/20">
               <Briefcase className="h-3.5 w-3.5" /> Work with us
             </span>
-            <h2 className="text-6xl md:text-7xl font-black tracking-tight leading-[0.9] text-white">
+            <h2 className="text-6xl md:text-7xl font-black tracking-tight leading-[0.9] text-gray-900">
               Let's build <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-amber-400 to-amber-200 uppercase">something great.</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-amber-400 to-amber-600 uppercase">something great.</span>
             </h2>
-            <p className="text-xl text-muted-foreground max-w-lg leading-relaxed pt-2 border-l-2 border-amber-500/30 pl-6 italic">
+            <p className="text-xl text-gray-500 max-w-lg leading-relaxed pt-2 border-l-2 border-amber-500/40 pl-6 italic">
               Share your proposal with our investment and management team. We review every submission for potential synergy.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            <div className="glass-panel p-6 rounded-3xl border border-white/5 hover:border-amber-500/20 transition-all group">
+            <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm hover:border-amber-500/40 hover:shadow-md transition-all group">
               <Calendar className="h-10 w-10 text-amber-500 mb-4 group-hover:scale-110 transition-transform" />
-              <h4 className="font-bold text-lg mb-1">Strategic Meetings</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">Book a consultation with our experts to discuss logistics or vehicle procurement.</p>
+              <h4 className="font-bold text-lg mb-1 text-gray-900">Strategic Meetings</h4>
+              <p className="text-sm text-gray-500 leading-relaxed">Book a consultation with our experts to discuss logistics or vehicle procurement.</p>
             </div>
-            <div className="glass-panel p-6 rounded-3xl border border-white/5 hover:border-blue-500/20 transition-all group">
-              <FileText className="h-10 w-10 text-blue-400 mb-4 group-hover:scale-110 transition-transform" />
-              <h4 className="font-bold text-lg mb-1">Proposal Drop</h4>
-              <p className="text-sm text-muted-foreground leading-relaxed">Submit your business plan or service proposal directly to our decision makers.</p>
+            <div className="bg-white p-6 rounded-3xl border border-gray-200 shadow-sm hover:border-blue-500/30 hover:shadow-md transition-all group">
+              <FileText className="h-10 w-10 text-blue-500 mb-4 group-hover:scale-110 transition-transform" />
+              <h4 className="font-bold text-lg mb-1 text-gray-900">Proposal Drop</h4>
+              <p className="text-sm text-gray-500 leading-relaxed">Submit your business plan or service proposal directly to our decision makers.</p>
             </div>
           </div>
         </div>
 
-        <div className="glass-panel p-8 md:p-10 rounded-[2.5rem] border border-white/10 shadow-2xl relative overflow-hidden animate-fade-in group">
-           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px] -z-1 group-hover:bg-amber-500/10 transition-colors" />
+        <div className="bg-white p-8 md:p-10 rounded-[2.5rem] border border-gray-200 shadow-xl relative overflow-hidden animate-fade-in">
+           <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/5 rounded-full blur-[80px] pointer-events-none" />
            
-           <h3 className="text-2xl font-bold mb-8 flex items-center gap-3">
+           <h3 className="text-2xl font-bold mb-8 flex items-center gap-3 text-gray-900">
              <MessageSquare className="h-6 w-6 text-amber-500" /> Intake Form
            </h3>
 
            <form onSubmit={handleSubmit} className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Full Name</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Full Name</Label>
                   <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input required placeholder="John Doe" className="pl-12 h-14 rounded-2xl bg-white/5 border-white/10 focus-visible:ring-amber-500 transition-all" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input required placeholder="John Doe" className="pl-12 h-14 rounded-2xl bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus-visible:ring-amber-500 focus-visible:border-amber-500 transition-all" value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Contact Phone</Label>
+                  <Label className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Contact Phone</Label>
                   <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input required placeholder="+234..." className="pl-12 h-14 rounded-2xl bg-white/5 border-white/10 focus-visible:ring-amber-500 transition-all" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input required placeholder="+234..." className="pl-12 h-14 rounded-2xl bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus-visible:ring-amber-500 focus-visible:border-amber-500 transition-all" value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} />
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Email Address</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Email Address</Label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input required type="email" placeholder="john@example.com" className="pl-12 h-14 rounded-2xl bg-white/5 border-white/10 focus-visible:ring-amber-500 transition-all" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input required type="email" placeholder="john@example.com" className="pl-12 h-14 rounded-2xl bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus-visible:ring-amber-500 focus-visible:border-amber-500 transition-all" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Meeting Intent / Summary</Label>
-                <Textarea required placeholder="Tell us why you'd like to meet or what your proposal covers..." className="min-h-[120px] rounded-2xl bg-white/5 border-white/10 focus-visible:ring-amber-500 transition-all resize-none p-5" value={formData.intent} onChange={e => setFormData({...formData, intent: e.target.value})} />
+                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Meeting Intent / Summary</Label>
+                <Textarea required placeholder="Tell us why you'd like to meet or what your proposal covers..." className="min-h-[120px] rounded-2xl bg-gray-50 border-gray-300 text-gray-900 placeholder:text-gray-400 focus-visible:ring-amber-500 focus-visible:border-amber-500 transition-all resize-none p-5" value={formData.intent} onChange={e => setFormData({...formData, intent: e.target.value})} />
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Preferred Meeting Date</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Preferred Meeting Date</Label>
                 <div className="relative">
-                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input required type="date" className="pl-12 h-14 rounded-2xl bg-white/5 border-white/10 focus-visible:ring-amber-500 transition-all [color-scheme:dark]" value={formData.bookingDate} onChange={e => setFormData({...formData, bookingDate: e.target.value})} />
+                  <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <Input required type="date" className="pl-12 h-14 rounded-2xl bg-gray-50 border-gray-300 text-gray-900 focus-visible:ring-amber-500 focus-visible:border-amber-500 transition-all [color-scheme:light]" value={formData.bookingDate} onChange={e => setFormData({...formData, bookingDate: e.target.value})} />
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-1">Upload Proposal (PDF/DOCX/Images, Max 10MB)</Label>
+                <Label className="text-xs font-bold uppercase tracking-wider text-gray-500 px-1">Upload Proposal (PDF/DOCX/Images, Max 10MB)</Label>
                 <div className="relative group/file">
-                   <div className={`h-24 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer ${file ? 'border-amber-500/50 bg-amber-500/5' : 'border-white/10 hover:border-white/20 hover:bg-white/5'}`}>
+                   <div className={`h-24 rounded-2xl border-2 border-dashed transition-all flex flex-col items-center justify-center cursor-pointer ${file ? 'border-amber-500/60 bg-amber-50' : 'border-gray-300 hover:border-amber-400 hover:bg-amber-50/50'}`}>
                       <input type="file" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                       {file ? (
                         <div className="flex items-center gap-3 px-6 w-full overflow-hidden">
                           <FileText className="h-8 w-8 text-amber-500 shrink-0" />
                           <div className="flex-1 truncate">
-                             <p className="text-sm font-bold truncate">{file.name}</p>
-                             <p className="text-[10px] text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                             <p className="text-sm font-bold truncate text-gray-800">{file.name}</p>
+                             <p className="text-[10px] text-gray-500">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
                           </div>
-                          <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null); }} className="p-2 rounded-full hover:bg-white/10">
+                          <button type="button" onClick={(e) => { e.stopPropagation(); setFile(null); }} className="p-2 rounded-full hover:bg-gray-100 text-gray-500">
                             <X className="h-4 w-4" />
                           </button>
                         </div>
                       ) : (
                         <>
-                          <Upload className="h-6 w-6 text-muted-foreground mb-1" />
-                          <span className="text-xs font-medium text-muted-foreground">Click or drag profile file here</span>
+                          <Upload className="h-6 w-6 text-gray-400 mb-1" />
+                          <span className="text-xs font-medium text-gray-400">Click or drag file here</span>
                         </>
                       )}
                    </div>
@@ -240,20 +244,20 @@ export default function PublicBooking() {
                 {loading ? <Loader2 className="h-6 w-6 animate-spin text-white" /> : <><CheckCircle2 className="h-5 w-5 mr-3" /> Submit Meeting Request</>}
               </Button>
               
-              <p className="text-[10px] text-center text-muted-foreground opacity-50 px-6">
+              <p className="text-[10px] text-center text-gray-400 px-6">
                 By submitting, you agree to our professional engagement terms. All proposals are treated as confidential.
               </p>
            </form>
         </div>
       </main>
 
-      <footer className="p-12 border-t border-white/5 z-20 relative">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
+      <footer className="p-12 border-t border-gray-200 z-20 relative bg-white">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
            <div className="flex items-center gap-2">
              <img src={logo} alt="Logo" className="h-6 w-6 object-contain" />
-             <span className="font-black text-sm tracking-widest">AMU GLOBAL MOTORS © 2024</span>
+             <span className="font-black text-sm tracking-widest text-gray-600">AMU GLOBAL MOTORS © 2024</span>
            </div>
-           <p className="text-xs font-bold uppercase tracking-[0.2em]">Crafting Excellence in Automotive Logistics</p>
+           <p className="text-xs font-bold uppercase tracking-[0.2em] text-gray-400">Crafting Excellence in Automotive Logistics</p>
         </div>
       </footer>
     </div>

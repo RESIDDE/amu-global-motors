@@ -22,6 +22,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip } from "recharts";
@@ -53,12 +54,17 @@ export default function Meetings() {
   const queryClient = useQueryClient();
 
   // Queries
-  const { data: meetings = [], isLoading } = useQuery({
+  const { data: meetings = [], isLoading, isError, error } = useQuery({
     queryKey: ["meetings"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("meetings").select("*").order("booking_date", { ascending: false });
-      if (error) throw error;
-      return data as any[];
+      try {
+        const { data, error } = await (supabase as any).from("meetings").select("*").order("booking_date", { ascending: false });
+        if (error) throw error;
+        return data as any[];
+      } catch (err) {
+        console.error("Error fetching meetings:", err);
+        throw err;
+      }
     },
   });
 
@@ -131,11 +137,22 @@ export default function Meetings() {
   });
 
   const filtered = meetings.filter(m => {
-    const matchesSearch = m.full_name.toLowerCase().includes(search.toLowerCase()) || 
-                          m.intent.toLowerCase().includes(search.toLowerCase());
+    const fullName = m.full_name || "";
+    const intent = m.intent || "";
+    const matchesSearch = fullName.toLowerCase().includes(search.toLowerCase()) || 
+                          intent.toLowerCase().includes(search.toLowerCase());
     const matchesStatus = statusFilter === "all" || m.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const getSafeDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? null : d;
+    } catch {
+      return null;
+    }
+  };
 
   const selectedMeeting = meetings.find(m => m.id === selectedId);
 
@@ -269,6 +286,15 @@ export default function Meetings() {
         <div className="space-y-4">
           {[1,2,3,4].map(i => <div key={i} className="h-20 w-full rounded-2xl bg-card/40 animate-pulse border border-white/5" />)}
         </div>
+      ) : isError ? (
+        <div className="glass-panel p-16 flex flex-col items-center justify-center text-center rounded-[2.5rem] border border-red-500/20 bg-red-500/5">
+          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+          <p className="text-red-500 font-bold mb-2">Error loading meetings</p>
+          <p className="text-sm text-muted-foreground">{(error as any)?.message || "The meetings table might not be correctly set up in the database."}</p>
+          <Button variant="outline" className="mt-6 rounded-xl" onClick={() => queryClient.invalidateQueries({ queryKey: ["meetings"] })}>
+            Try Again
+          </Button>
+        </div>
       ) : filtered.length === 0 ? (
         <div className="glass-panel p-16 flex flex-col items-center justify-center text-center rounded-[2.5rem] border border-white/5 bg-background/30">
           <Calendar className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -293,11 +319,15 @@ export default function Meetings() {
                   <TableCell className="px-6 py-4">
                     <div className="flex items-center gap-3">
                        <div className="h-9 w-9 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-500 text-xs font-black">
-                         {m.full_name.charAt(0)}
+                         {(m.full_name || "?").charAt(0)}
                        </div>
                        <div>
-                         <p className="font-bold text-sm leading-none mb-1 group-hover:text-amber-500 transition-colors">{m.full_name}</p>
-                         <p className="text-[10px] text-muted-foreground font-medium uppercase truncate max-w-[120px]">{m.contact_info.split('|')[0].replace('Phone:', '').trim()}</p>
+                         <p className="font-bold text-sm leading-none mb-1 group-hover:text-amber-500 transition-colors">{m.full_name || "Unknown"}</p>
+                         <p className="text-[10px] text-muted-foreground font-medium uppercase truncate max-w-[120px]">
+                           {m.contact_info?.includes('|') 
+                             ? m.contact_info.split('|')[0].replace('Phone:', '').trim() 
+                             : "No phone"}
+                         </p>
                        </div>
                     </div>
                   </TableCell>
@@ -306,8 +336,12 @@ export default function Meetings() {
                   </TableCell>
                   <TableCell>
                     <div className="flex flex-col">
-                       <span className="text-sm font-bold">{format(new Date(m.booking_date), "MMM dd, yyyy")}</span>
-                       <span className="text-[10px] text-muted-foreground font-semibold">{format(new Date(m.booking_date), "p")}</span>
+                       <span className="text-sm font-bold">
+                         {getSafeDate(m.booking_date) ? format(new Date(m.booking_date), "MMM dd, yyyy") : "Invalid Date"}
+                       </span>
+                       {getSafeDate(m.booking_date) && (
+                         <span className="text-[10px] text-muted-foreground font-semibold">{format(new Date(m.booking_date), "p")}</span>
+                       )}
                     </div>
                   </TableCell>
                   <TableCell>

@@ -18,7 +18,7 @@ import {
   ChevronRight, ArrowRight, Receipt, ClipboardCheck, Wrench, PlusCircle, Clock, DollarSign, PieChart as PieChartIcon, Search, Car, Pencil, QrCode, FileOutput, Trash2, History as HistoryIcon, Download,
   Printer, FileText
 } from "lucide-react";
-import { triggerPrint, downloadAsPNG, downloadAsPDF, downloadTableAsPDF } from "@/lib/exportHelpers";
+import { triggerPrint, downloadAsPNG, downloadAsPDF, downloadTableAsPDF, printTable } from "@/lib/exportHelpers";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
