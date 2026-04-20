@@ -10,7 +10,6 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import logo from "@/assets/logo.png";
-import { motion, AnimatePresence } from "framer-motion";
 
 export default function PublicBooking() {
   const [formData, setFormData] = useState({
@@ -85,29 +84,25 @@ export default function PublicBooking() {
   if (submitted) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6 text-center">
-        <AnimatePresence>
-          <motion.div 
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="glass-panel p-12 rounded-[2.5rem] border border-white/5 shadow-2xl max-w-lg w-full relative overflow-hidden"
+        <div 
+          className="glass-panel p-12 rounded-[2.5rem] border border-white/5 shadow-2xl max-w-lg w-full relative overflow-hidden animate-in fade-in zoom-in-95 duration-700"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
+          <div className="bg-emerald-500/20 p-6 rounded-full w-fit mx-auto mb-8 relative">
+            <CheckCircle2 className="h-16 w-16 text-emerald-500" />
+          </div>
+          <h2 className="text-4xl font-black mb-4 tracking-tight">Request Received!</h2>
+          <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
+            Thank you for reaching out to Amu Global Motors. Our team will review your proposal and get back to you shortly.
+          </p>
+          <Button 
+            onClick={() => window.location.reload()}
+            size="lg"
+            className="rounded-2xl h-14 px-10 bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-all shadow-lg shadow-emerald-500/20"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl" />
-            <div className="bg-emerald-500/20 p-6 rounded-full w-fit mx-auto mb-8 relative">
-              <CheckCircle2 className="h-16 w-16 text-emerald-500" />
-            </div>
-            <h2 className="text-4xl font-black mb-4 tracking-tight">Request Received!</h2>
-            <p className="text-muted-foreground text-lg mb-10 leading-relaxed">
-              Thank you for reaching out to Amu Global Motors. Our team will review your proposal and get back to you shortly.
-            </p>
-            <Button 
-              onClick={() => window.location.reload()}
-              size="lg"
-              className="rounded-2xl h-14 px-10 bg-emerald-500 hover:bg-emerald-600 text-white font-bold transition-all shadow-lg shadow-emerald-500/20"
-            >
-              Submit Another Request
-            </Button>
-          </motion.div>
-        </AnimatePresence>
+            Submit Another Request
+          </Button>
+        </div>
       </div>
     );
   }
