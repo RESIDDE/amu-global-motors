@@ -20,6 +20,8 @@ import Inquiries from "./pages/Inquiries";
 import Inspections from "./pages/Inspections";
 import RepairsMaintenance from "./pages/RepairsMaintenance";
 import AuthorityToSell from "./pages/AuthorityToSell";
+import Meetings from "./pages/Meetings";
+import PublicBooking from "./pages/PublicBooking";
 import SignRepair from "./pages/SignRepair";
 import SignCustomer from "./pages/SignCustomer";
 import SignInspection from "./pages/SignInspection";
@@ -70,6 +72,7 @@ function AppRoutes() {
       {/* Public pages */}
       <Route path="/auth"                element={<GuestGuard><Auth /></GuestGuard>} />
       <Route path="/portal"              element={<CustomerPortal />} />
+      <Route path="/book"                element={<PublicBooking />} />
       <Route path="/sign/repair/:id"     element={<SignRepair />} />
       <Route path="/sign/customer/:id"   element={<SignCustomer />} />
       <Route path="/sign/inspection/:id" element={<SignInspection />} />
@@ -92,6 +95,7 @@ function AppRoutes() {
               <Route path="/inspections"       element={<RoleGuard page="inspections"><Inspections /></RoleGuard>} />
               <Route path="/repairs"           element={<RoleGuard page="repairs"><RepairsMaintenance /></RoleGuard>} />
               <Route path="/authority-to-sell" element={<RoleGuard page="authority-to-sell"><AuthorityToSell /></RoleGuard>} />
+              <Route path="/meetings"          element={<RoleGuard page="meetings"><Meetings /></RoleGuard>} />
               {/* Settings — only super_admin can see; RoleGuard handled internally */}
               <Route path="/settings"          element={<Settings />} />
               <Route path="/unauthorized"      element={<Unauthorized />} />
