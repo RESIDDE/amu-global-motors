@@ -91,16 +91,15 @@ export function getPrintWatermarkHTML() {
   const logoUrl = `${window.location.origin}${logo}`;
   return `
     <div style="
-      position: fixed;
+      position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
       z-index: 0;
-      opacity: 0.12;
+      opacity: 0.08;
       user-select: none;
       filter: grayscale(100%);
-      mix-blend-mode: multiply;
     ">
       <img src="${logoUrl}" style="width: 500px; height: 500px; object-fit: contain;" />
     </div>

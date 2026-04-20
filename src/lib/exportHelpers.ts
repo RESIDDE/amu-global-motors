@@ -7,10 +7,10 @@ import { jsPDF } from "jspdf";
 export async function downloadAsPDF(html: string, filename: string) {
   const container = document.createElement("div");
   // Set styles to make it look like a proper document
-  container.style.position = "absolute";
+  container.style.position = "relative";
   container.style.left = "-9999px";
   container.style.top = "0";
-  container.style.width = "800px";
+  container.style.width = "800px"; container.style.minHeight = "1130px";
   container.style.padding = "40px";
   container.style.backgroundColor = "#ffffff";
   container.style.fontFamily = "system-ui, -apple-system, sans-serif";
@@ -135,10 +135,10 @@ export function triggerPrint(html: string) {
 export async function downloadAsPNG(html: string, filename: string) {
   const container = document.createElement("div");
   // Set styles to make it look like a proper document
-  container.style.position = "absolute";
+  container.style.position = "relative";
   container.style.left = "-9999px";
   container.style.top = "0";
-  container.style.width = "800px";
+  container.style.width = "800px"; container.style.minHeight = "1130px";
   container.style.padding = "40px";
   container.style.backgroundColor = "#ffffff";
   container.style.fontFamily = "system-ui, -apple-system, sans-serif";
