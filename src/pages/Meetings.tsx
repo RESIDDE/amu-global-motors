@@ -17,6 +17,7 @@ import {
   ChevronRight, BadgeCheck, MessageSquare, AlertCircle
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
