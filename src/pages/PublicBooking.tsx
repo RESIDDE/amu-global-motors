@@ -58,7 +58,7 @@ export default function PublicBooking() {
       }
 
       // 2. Insert into meetings table
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase as any)
         .from('meetings')
         .insert([{
           full_name: formData.fullName,

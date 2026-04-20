@@ -35,7 +35,7 @@ export default function Meetings() {
   const { data: meetings = [], isLoading } = useQuery({
     queryKey: ["meetings"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("meetings").select("*").order("booking_date", { ascending: false });
+      const { data, error } = await (supabase as any).from("meetings").select("*").order("booking_date", { ascending: false });
       if (error) throw error;
       return data as any[];
     },
@@ -43,7 +43,7 @@ export default function Meetings() {
 
   const updateStatusMutation = useMutation({
     mutationFn: async ({ id, status }: { id: string, status: string }) => {
-      const { error } = await supabase.from("meetings").update({ status }).eq("id", id);
+      const { error } = await (supabase as any).from("meetings").update({ status }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -55,7 +55,7 @@ export default function Meetings() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("meetings").delete().eq("id", id);
+      const { error } = await (supabase as any).from("meetings").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
