@@ -22,11 +22,17 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
+import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip } from "recharts";
 
 const statuses = ["Pending", "Approved", "Rejected", "Completed"];
+const STATUS_COLORS = {
+  Pending: "#f59e0b",
+  Approved: "#10b981",
+  Rejected: "#ef4444",
+  Completed: "#3b82f6"
+};
 
 export default function Meetings() {
   const { role } = useAuth();
@@ -176,24 +182,64 @@ export default function Meetings() {
         </div>
       </div>
 
-      {/* Stats Quick View */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-         <div className="glass-panel p-4 rounded-3xl border border-white/5 bg-white/[0.02]">
-            <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1">Total</p>
-            <p className="text-2xl font-black">{meetings.length}</p>
-         </div>
-         <div className="glass-panel p-4 rounded-3xl border border-white/5 bg-amber-500/5">
-            <p className="text-[10px] uppercase font-bold text-amber-500 tracking-widest mb-1">Pending</p>
-            <p className="text-2xl font-black">{meetings.filter(m => m.status === 'Pending').length}</p>
-         </div>
-         <div className="glass-panel p-4 rounded-3xl border border-white/5 bg-emerald-500/5">
-            <p className="text-[10px] uppercase font-bold text-emerald-500 tracking-widest mb-1">Approved</p>
-            <p className="text-2xl font-black">{meetings.filter(m => m.status === 'Approved').length}</p>
-         </div>
-         <div className="glass-panel p-4 rounded-3xl border border-white/5 bg-blue-500/5">
-            <p className="text-[10px] uppercase font-bold text-blue-500 tracking-widest mb-1">Completed</p>
-            <p className="text-2xl font-black">{meetings.filter(m => m.status === 'Completed').length}</p>
-         </div>
+      {/* Small Dashboard Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 grid grid-cols-2 md:grid-cols-4 gap-4">
+           <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.02] flex flex-col justify-between">
+              <p className="text-[10px] uppercase font-bold text-muted-foreground tracking-widest mb-1">Total Requests</p>
+              <p className="text-4xl font-black">{meetings.length}</p>
+           </div>
+           <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-amber-500/5 flex flex-col justify-between">
+              <p className="text-[10px] uppercase font-bold text-amber-500 tracking-widest mb-1">Pending</p>
+              <p className="text-4xl font-black">{meetings.filter((m: any) => m.status === 'Pending').length}</p>
+           </div>
+           <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-emerald-500/5 flex flex-col justify-between">
+              <p className="text-[10px] uppercase font-bold text-emerald-500 tracking-widest mb-1">Approved</p>
+              <p className="text-4xl font-black">{meetings.filter((m: any) => m.status === 'Approved').length}</p>
+           </div>
+           <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-blue-500/5 flex flex-col justify-between">
+              <p className="text-[10px] uppercase font-bold text-blue-500 tracking-widest mb-1">Completed</p>
+              <p className="text-4xl font-black">{meetings.filter((m: any) => m.status === 'Completed').length}</p>
+           </div>
+        </div>
+        <div className="glass-panel p-6 rounded-3xl border border-white/5 bg-white/[0.01] h-[160px] flex items-center justify-center">
+           {meetings.length > 0 ? (
+             <ResponsiveContainer width="100%" height="100%">
+               <PieChart>
+                  <Pie
+                    data={statuses.map(s => ({ 
+                      name: s, 
+                      value: meetings.filter((m: any) => m.status === s).length 
+                    })).filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={40}
+                    outerRadius={60}
+                    paddingAngle={5}
+                    dataKey="value"
+                  >
+                    {statuses.map(s => (
+                      <Cell key={s} fill={STATUS_COLORS[s as keyof typeof STATUS_COLORS]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    contentStyle={{ backgroundColor: '#111', border: 'none', borderRadius: '12px', fontSize: '10px' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+               </PieChart>
+             </ResponsiveContainer>
+           ) : (
+             <p className="text-xs text-muted-foreground italic">No data yet</p>
+           )}
+           <div className="ml-4 space-y-1 hidden sm:block">
+              {statuses.map(s => (
+                <div key={s} className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full" style={{ backgroundColor: STATUS_COLORS[s as keyof typeof STATUS_COLORS] }} />
+                   <span className="text-[10px] font-bold text-muted-foreground uppercase">{s}</span>
+                </div>
+              ))}
+           </div>
+        </div>
       </div>
 
       {/* Filter Bar */}
@@ -285,9 +331,28 @@ export default function Meetings() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right px-6">
-                    <Button variant="ghost" size="sm" onClick={() => setSelectedId(m.id)} className="rounded-xl font-bold gap-2 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10">
-                       <Eye className="h-4 w-4" /> View
-                    </Button>
+                    <div className="flex justify-end gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setSelectedId(m.id)} 
+                        className="rounded-xl font-bold gap-2 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10"
+                      >
+                         <Eye className="h-4 w-4" /> View
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        onClick={() => {
+                          if (confirm("Are you sure you want to delete this record?")) {
+                            deleteMutation.mutate(m.id);
+                          }
+                        }}
+                        className="h-9 w-9 rounded-xl text-muted-foreground hover:text-red-500 hover:bg-red-500/10"
+                      >
+                         <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
