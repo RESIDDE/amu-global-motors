@@ -14,22 +14,35 @@ import {
 import { 
   Calendar, Users, FileText, CheckCircle2, XCircle, Clock, 
   ExternalLink, Search, Download, Trash2, Mail, Phone,
-  ChevronRight, BadgeCheck, MessageSquare, AlertCircle
+  ChevronRight, BadgeCheck, MessageSquare, AlertCircle,
+  Copy, Plus, Eye
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { useNavigate } from "react-router-dom";
 
 const statuses = ["Pending", "Approved", "Rejected", "Completed"];
 
 export default function Meetings() {
   const { role } = useAuth();
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [isAddingMeeting, setIsAddingMeeting] = useState(false);
+  const [newMeeting, setNewMeeting] = useState({
+    fullName: "",
+    phone: "",
+    email: "",
+    intent: "",
+    bookingDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+  });
+
   const queryClient = useQueryClient();
 
   // Queries
@@ -40,6 +53,32 @@ export default function Meetings() {
       if (error) throw error;
       return data as any[];
     },
+  });
+
+  const addMeetingMutation = useMutation({
+    mutationFn: async (payload: any) => {
+      const { error } = await (supabase as any).from("meetings").insert([{
+        full_name: payload.fullName,
+        contact_info: `Phone: ${payload.phone} | Email: ${payload.email}`,
+        intent: payload.intent,
+        booking_date: new Date(payload.bookingDate).toISOString(),
+        status: 'Approved'
+      }]);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["meetings"] });
+      toast.success("Meeting logged successfully");
+      setIsAddingMeeting(false);
+      setNewMeeting({
+        fullName: "",
+        phone: "",
+        email: "",
+        intent: "",
+        bookingDate: format(new Date(), "yyyy-MM-dd'T'HH:mm"),
+      });
+    },
+    onError: (err: any) => toast.error(err.message || "Failed to log meeting"),
   });
 
   const updateStatusMutation = useMutation({
@@ -85,6 +124,12 @@ export default function Meetings() {
     }
   };
 
+  const copyBookingLink = () => {
+    const url = window.location.origin + "/book";
+    navigator.clipboard.writeText(url);
+    toast.success("Booking link copied to clipboard");
+  };
+
   return (
     <div className="space-y-8 animate-fade-up pb-10 max-w-7xl mx-auto">
       {/* Header */}
@@ -99,9 +144,15 @@ export default function Meetings() {
             Manage professional bookings and incoming business proposals from one central dashboard.
           </p>
         </div>
-        <div className="flex gap-2">
-           <Button variant="outline" className="rounded-xl" onClick={() => window.open('/book', '_blank')}>
+        <div className="flex flex-wrap gap-2">
+           <Button variant="outline" className="rounded-xl border-amber-500/20 text-amber-500 hover:bg-amber-500/5" onClick={copyBookingLink}>
+              <Copy className="mr-2 h-4 w-4" /> Copy Booking Link
+           </Button>
+           <Button variant="outline" className="rounded-xl" onClick={() => navigate('/book')}>
               <ExternalLink className="mr-2 h-4 w-4" /> Open Public Form
+           </Button>
+           <Button className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-lg shadow-amber-500/20" onClick={() => setIsAddingMeeting(true)}>
+              <Plus className="mr-2 h-4 w-4" /> New Meeting
            </Button>
         </div>
       </div>
@@ -215,8 +266,8 @@ export default function Meetings() {
                     </span>
                   </TableCell>
                   <TableCell className="text-right px-6">
-                    <Button variant="ghost" size="icon" onClick={() => setSelectedId(m.id)} className="rounded-xl opacity-0 group-hover:opacity-100 transition-all hover:bg-white/10">
-                       <ChevronRight className="h-5 w-5" />
+                    <Button variant="ghost" size="sm" onClick={() => setSelectedId(m.id)} className="rounded-xl font-bold gap-2 text-amber-500 hover:text-amber-500 hover:bg-amber-500/10">
+                       <Eye className="h-4 w-4" /> View
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -302,6 +353,53 @@ export default function Meetings() {
               </div>
             </>
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Meeting Dialog */}
+      <Dialog open={isAddingMeeting} onOpenChange={setIsAddingMeeting}>
+        <DialogContent className="max-w-xl rounded-[2.5rem] glass-panel border-white/10 p-0 overflow-hidden shadow-2xl bg-background/95 backdrop-blur-2xl">
+          <div className="p-8 border-b border-white/5 bg-amber-500/5">
+             <DialogHeader>
+                <DialogTitle className="text-2xl font-black">Log New Meeting</DialogTitle>
+                <p className="text-sm text-muted-foreground">Manually add a meeting to the organization's schedule.</p>
+             </DialogHeader>
+          </div>
+          
+          <div className="p-8 space-y-4">
+             <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                   <Label>Full Name</Label>
+                   <Input value={newMeeting.fullName} onChange={e => setNewMeeting({...newMeeting, fullName: e.target.value})} placeholder="Applicant Name" className="rounded-xl bg-white/5 border-white/10" />
+                </div>
+                <div className="space-y-2">
+                   <Label>Phone Number</Label>
+                   <Input value={newMeeting.phone} onChange={e => setNewMeeting({...newMeeting, phone: e.target.value})} placeholder="+234..." className="rounded-xl bg-white/5 border-white/10" />
+                </div>
+             </div>
+             
+             <div className="space-y-2">
+                <Label>Email Address</Label>
+                <Input value={newMeeting.email} onChange={e => setNewMeeting({...newMeeting, email: e.target.value})} placeholder="email@example.com" className="rounded-xl bg-white/5 border-white/10" />
+             </div>
+
+             <div className="space-y-2">
+                <Label>Meeting intent / Summary</Label>
+                <Textarea value={newMeeting.intent} onChange={e => setNewMeeting({...newMeeting, intent: e.target.value})} placeholder="Reason for the meeting..." className="rounded-xl bg-white/5 border-white/10 min-h-[100px]" />
+             </div>
+
+             <div className="space-y-2">
+                <Label>Meeting Date & Time</Label>
+                <Input type="datetime-local" value={newMeeting.bookingDate} onChange={e => setNewMeeting({...newMeeting, bookingDate: e.target.value})} className="rounded-xl bg-white/5 border-white/10 [color-scheme:dark]" />
+             </div>
+          </div>
+
+          <div className="p-8 border-t border-white/5 bg-foreground/5 flex justify-end gap-3">
+             <Button variant="ghost" onClick={() => setIsAddingMeeting(false)} className="rounded-xl">Cancel</Button>
+             <Button onClick={() => addMeetingMutation.mutate(newMeeting)} disabled={addMeetingMutation.isPending} className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-bold px-8">
+                {addMeetingMutation.isPending ? "Saving..." : "Save Meeting"}
+             </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
