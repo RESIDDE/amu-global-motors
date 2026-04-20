@@ -1,3 +1,4 @@
+import { format, subMonths, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -31,7 +32,6 @@ import {
   PieChart, Pie, Cell, AreaChart, Area, CartesianGrid
 } from "recharts";
 import { useMemo } from "react";
-import { format, subMonths, isWithinInterval, startOfMonth, endOfMonth } from "date-fns";
 
 const COLORS = ["hsl(var(--primary))", "hsl(199 89% 48%)", "hsl(142 76% 36%)", "hsl(38 92% 50%)", "hsl(262 83% 58%)", "hsl(0 84% 60%)"];
 

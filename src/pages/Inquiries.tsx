@@ -1,3 +1,4 @@
+import { format } from "date-fns";
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -34,7 +35,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { exportToCSV, exportToJSON, downloadTableAsPDF } from "@/lib/exportHelpers";
-import { format } from "date-fns";
 
 const statuses = ["Open", "In Progress", "Closed"];
 const emptyForm = { 
