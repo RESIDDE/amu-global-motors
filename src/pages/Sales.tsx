@@ -329,8 +329,18 @@ export default function Sales() {
     ${getPrintWatermarkHTML()}
     ${getPrintHeaderHTML()}
     <div class="header">
-      <h1>SALES RECEIPT</h1>
-      <p>Receipt No: ${(sale as any).sale_number ? `#${(sale as any).sale_number}` : sale.id.slice(0, 8).toUpperCase()}</p>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h1 style="margin: 0; font-size: 24px; color: #1a1a2e; text-transform: uppercase; letter-spacing: 2px;">Sales Receipt</h1>
+        <div style="text-align: right;">
+          <div style="border: 2px solid #1a1a2e; padding: 5px 15px; display: inline-block; font-family: 'Times New Roman', serif;">
+            <span style="font-size: 20px; font-weight: bold; margin-right: 5px;">№</span>
+            <span style="font-size: 22px; font-weight: bold; letter-spacing: 2px;">
+              ${(sale as any).sale_number ? (sale as any).sale_number.padStart(5, '0') : sale.id.slice(0, 5).toUpperCase()}
+            </span>
+          </div>
+          <p style="margin: 5px 0 0; font-size: 10px; font-weight: bold; text-transform: uppercase; color: #1a1a2e;">CASH/CREDIT INVOICE</p>
+        </div>
+      </div>
     </div>
 
     <div class="section">
@@ -553,7 +563,7 @@ export default function Sales() {
                   {paged.map((s) => (
                     <TableRow key={s.id} className="border-border/10 hover:bg-white/5 transition-colors group">
                       <TableCell className="px-6 py-4">
-                        <span className="font-mono text-xs font-bold text-violet-500 bg-violet-500/5 px-2 py-1 rounded">#{(s as any).sale_number || s.id.slice(0, 4)}</span>
+                        <span className="font-mono text-xs font-bold text-violet-500 bg-violet-500/5 px-2 py-1 rounded">№ {(s as any).sale_number ? (s as any).sale_number.padStart(5, '0') : s.id.slice(0, 5).toUpperCase()}</span>
                       </TableCell>
                       <TableCell>
                          <div className="flex items-center gap-2">
