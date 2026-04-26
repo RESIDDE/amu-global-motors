@@ -198,9 +198,12 @@ export default function SignSale() {
                 <AlertCircle className="w-6 h-6 text-amber-500 shrink-0 mt-0.5" />
                 <div>
                    <h4 className="font-bold text-amber-500 uppercase tracking-wider text-xs">Security Note & Refund Policy</h4>
-                   <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
-                      By providing your digital signature below, you confirm the details above are correct and acknowledge our policy: <strong className="text-foreground underline underline-offset-4 decoration-amber-500/50">NOTICE: NO REFUND AFTER PAYMENT</strong>.
-                   </p>
+                    <p className="text-muted-foreground text-sm mt-1 leading-relaxed">
+                       By providing your digital signature below, you confirm the details above are correct and acknowledge our policy: <strong className="text-foreground underline underline-offset-4 decoration-amber-500/50 uppercase tracking-tight">Notice: No refund of money after payment.</strong>
+                    </p>
+                    <p className="text-[11px] text-muted-foreground/80 mt-2 font-medium italic">
+                       NB: In case the depositor decides not to go on with the transaction, and he/she decides to take his/her money back, he/she will only collect it after the said car is sold.
+                    </p>
                 </div>
              </div>
 

@@ -355,7 +355,10 @@ export default function Sales() {
     </div>
 
     <div class="refund-note">
-       NOTICE: NO REFUND AFTER PAYMENT
+       NOTICE: NO REFUND OF MONEY AFTER PAYMENT. <br/>
+       <span style="font-size: 11px; font-weight: normal; margin-top: 5px; display: block;">
+         NB: In case the depositor decides not to go on with the transaction, and he/she decides to take his/her money back, he/she will only collect it after the said car is sold.
+       </span>
     </div>
 
       ${sale.rep_signature || sale.buyer_signature ? `<div class="signature-area">
