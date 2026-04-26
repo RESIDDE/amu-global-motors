@@ -64,16 +64,16 @@ export default function VehiclesList() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  const { data: vehicles = [], isLoading } = useQuery({
+  const { data: vehicles = [] as any[], isLoading } = useQuery({
     queryKey: ["vehicles"],
     queryFn: async () => {
       const { data, error } = await supabase.from("vehicles").select("*").order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
   });
 
-  const stats = useMemo(() => {
+  const stats = useMemo((): any => {
     const fleet = vehicles.filter(v => v.status !== "Customer Car");
     const totalCount = fleet.length;
     const availableCount = fleet.filter(v => v.status?.toLowerCase() === "available").length;
@@ -95,7 +95,7 @@ export default function VehiclesList() {
     }, {});
     const makeData = Object.entries(makesMap)
       .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value)
+      .sort((a: any, b: any) => (b.value as number) - (a.value as number))
       .slice(0, 5);
 
     // Condition Distribution
@@ -162,7 +162,7 @@ export default function VehiclesList() {
     if (v.status === "Customer Car") return false;
 
     const q = search.toLowerCase();
-    const matchesSearch = !q || v.make.toLowerCase().includes(q) || v.model.toLowerCase().includes(q) || (v.vin && v.vin.toLowerCase().includes(q)) || ((v as any).source_company && (v as any).source_company.toLowerCase().includes(q));
+    const matchesSearch = !q || v.make.toLowerCase().includes(q) || v.model.toLowerCase().includes(q) || (v.trim && v.trim.toLowerCase().includes(q)) || (v.vin && v.vin.toLowerCase().includes(q)) || ((v as any).source_company && (v as any).source_company.toLowerCase().includes(q));
     const matchesCondition = conditionFilter === "all" || (v as any).condition === conditionFilter;
     return matchesSearch && matchesCondition;
   });
@@ -313,7 +313,7 @@ export default function VehiclesList() {
                   <div className="h-1.5 w-full bg-foreground/5 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-emerald-500 rounded-full transition-all duration-1000" 
-                      style={{ width: `${(c.value / stats.totalCount) * 100}%` }} 
+                      style={{ width: `${((c.value as number) / stats.totalCount) * 100}%` }} 
                     />
                   </div>
                 </div>
@@ -435,7 +435,7 @@ export default function VehiclesList() {
                          <div className="p-2 rounded-lg bg-foreground/5 group-hover:bg-sky-500/10 transition-colors">
                            <Car className="h-4 w-4 text-sky-500" />
                          </div>
-                         <span className="font-semibold text-sm transition-colors group-hover:text-primary">{v.make} {v.model}</span>
+                         <span className="font-semibold text-sm transition-colors group-hover:text-primary">{v.make} {v.model} {v.trim && <span className="opacity-70 font-normal ml-1">{v.trim}</span>}</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm font-medium">{v.year}</TableCell>
@@ -480,7 +480,7 @@ export default function VehiclesList() {
                        <Car className="h-5 w-5 text-sky-500" />
                      </div>
                      <div>
-                       <p className="font-semibold text-foreground text-sm">{v.year} {v.make} {v.model}</p>
+                       <p className="font-semibold text-foreground text-sm">{v.year} {v.make} {v.model} {v.trim}</p>
                        {v.vin && <p className="text-xs text-muted-foreground font-mono mt-1 w-full overflow-hidden text-ellipsis">VIN: {v.vin}</p>}
                      </div>
                   </div>

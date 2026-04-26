@@ -25,13 +25,21 @@ import {
 import {
   Pagination, PaginationContent, PaginationItem, PaginationLink, PaginationNext, PaginationPrevious,
 } from "@/components/ui/pagination";
-import { PlusCircle, Pencil, Trash2, Receipt, Download, FileText, Printer, FileOutput, DollarSign, Calendar, Search, Car, Users, QrCode, CheckCircle } from "lucide-react";
+import { PlusCircle, Pencil, Trash2, Receipt, Download, FileText, Printer, FileOutput, DollarSign, Calendar, Search, Car, Users, QrCode, CheckCircle, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { exportToCSV, exportToJSON, printTable, downloadTableAsPDF, triggerPrint, downloadAsPNG, downloadAsPDF } from "@/lib/exportHelpers";
 import { useAuth } from "@/hooks/useAuth";
 import { canEdit } from "@/lib/permissions";
 import { getPrintHeaderHTML, getPrintWatermarkHTML } from "@/components/PrintHeader";
 import { getPrintFooterHTML } from "@/components/PrintFooter";
+import { 
+  Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList 
+} from "@/components/ui/command";
+import {
+  Popover, PopoverContent, PopoverTrigger,
+} from "@/components/ui/popover";
+import { Check, ChevronsUpDown, UserPlus } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { SignaturePad } from "@/components/SignaturePad";
@@ -65,6 +73,16 @@ export default function Sales() {
   const [search, setSearch] = useState("");
   const [vehicleSearch, setVehicleSearch] = useState("");
   const [page, setPage] = useState(0);
+  const [isNewCustomer, setIsNewCustomer] = useState(false);
+  const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "", address: "" });
+  const [customerSearchOpen, setCustomerSearchOpen] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportDates, setExportDates] = useState({
+    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
+    end: new Date().toISOString().split('T')[0]
+  });
+  const [exportMode, setExportMode] = useState<"summary" | "individual">("individual");
+  const [isExporting, setIsExporting] = useState(false);
   const PAGE_SIZE = 15;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -127,8 +145,26 @@ export default function Sales() {
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
+      let actualCustomerId = form.customer_id;
+
+      if (isNewCustomer) {
+        if (!newCustomer.name) throw new Error("Customer name is required");
+        const { data: nc, error: nce } = await supabase
+          .from("customers")
+          .insert({
+            name: newCustomer.name,
+            phone: newCustomer.phone || null,
+            email: newCustomer.email || null,
+            address: newCustomer.address || null
+          })
+          .select()
+          .single();
+        if (nce) throw nce;
+        actualCustomerId = nc.id;
+      }
+
       const payload = {
-        customer_id: form.customer_id,
+        customer_id: actualCustomerId,
         sale_price: parseFloat(form.sale_price),
         sale_date: form.sale_date,
         payment_type: form.payment_type,
@@ -167,6 +203,7 @@ export default function Sales() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["sales"] });
+      queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success(editId ? "Sale updated" : "Sale recorded");
       closeDialog();
     },
@@ -185,7 +222,13 @@ export default function Sales() {
     onError: () => toast.error("Failed to delete sale"),
   });
 
-  const closeDialog = () => { setDialogOpen(false); setEditId(null); setForm(emptyForm); };
+  const closeDialog = () => { 
+    setDialogOpen(false); 
+    setEditId(null); 
+    setForm(emptyForm); 
+    setIsNewCustomer(false);
+    setNewCustomer({ name: "", phone: "", email: "", address: "" });
+  };
 
   const openEdit = (s: any) => {
     setEditId(s.id);
@@ -287,7 +330,7 @@ export default function Sales() {
     ${getPrintHeaderHTML()}
     <div class="header">
       <h1>SALES RECEIPT</h1>
-      <p>Receipt No: ${sale.id.slice(0, 8).toUpperCase()}</p>
+      <p>Receipt No: ${(sale as any).sale_number ? `#${(sale as any).sale_number}` : sale.id.slice(0, 8).toUpperCase()}</p>
     </div>
 
     <div class="section">
@@ -348,6 +391,64 @@ export default function Sales() {
     await downloadAsPDF(html, `receipt_${sale.id.slice(0, 8)}`);
   };
 
+  const handleBulkExport = async () => {
+    const start = new Date(exportDates.start);
+    const end = new Date(exportDates.end);
+    end.setHours(23, 59, 59, 999);
+
+    const toExport = sales.filter(s => {
+      const d = new Date(s.sale_date);
+      return d >= start && d <= end;
+    });
+
+    if (toExport.length === 0) {
+      toast.error("No sales found in this date range");
+      return;
+    }
+
+    setIsExporting(true);
+    setExportDialogOpen(false);
+
+    try {
+      if (exportMode === "summary") {
+        const rows = toExport.map((s) => ({
+          sale_no: (s as any).sale_number ? `#${(s as any).sale_number}` : s.id.slice(0, 4),
+          vehicle: vehicleMap[s.vehicle_id] || s.vehicle_id,
+          customer: customerMap[s.customer_id] || s.customer_id,
+          sale_price: `₦${Number(s.sale_price).toLocaleString()}`,
+          sale_date: new Date(s.sale_date).toLocaleDateString(),
+        }));
+        await downloadTableAsPDF(`Sales Summary (${exportDates.start} to ${exportDates.end})`, rows, [
+          { key: "sale_no", label: "Sale #" },
+          { key: "vehicle", label: "Vehicle" },
+          { key: "customer", label: "Customer" },
+          { key: "sale_price", label: "Price" },
+          { key: "sale_date", label: "Date" },
+        ]);
+      } else {
+        toast.info(`Generating ${toExport.length} documents... Please wait.`);
+        // For individual documents, we loop and trigger downloads
+        // We do it in small batches to not overwhelm the browser
+        for (let i = 0; i < toExport.length; i++) {
+          const s = toExport[i];
+          const html = getReceiptHTML(s);
+          await downloadAsPDF(html, `receipt_${(s as any).sale_number || s.id.slice(0, 4)}`);
+          
+          // Small delay between documents to help the browser
+          if (i < toExport.length - 1) {
+             await new Promise(r => setTimeout(r, 800));
+          }
+        }
+        toast.success(`Exported ${toExport.length} documents`);
+      }
+    } catch (error) {
+      console.error("Bulk export failed:", error);
+      toast.error("Bulk export failed");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const handleDownloadPNG = async (sale: any) => {
     const html = getReceiptHTML(sale);
     await downloadAsPNG(html, `receipt_${sale.id.slice(0, 8)}`);
@@ -385,7 +486,10 @@ export default function Sales() {
                 <FileText className="mr-2 h-4 w-4 text-muted-foreground" /> Export to JSON
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handleDownloadSummaryPDF} className="rounded-lg cursor-pointer text-violet-500 font-bold">
-                <FileText className="mr-2 h-4 w-4" /> Download PDF Summary (Direct)
+                <FileText className="mr-2 h-4 w-4" /> Download PDF Summary (All)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setExportDialogOpen(true)} className="rounded-lg cursor-pointer text-emerald-500 font-bold">
+                <Download className="mr-2 h-4 w-4" /> Advanced Bulk Export (Date Range)
               </DropdownMenuItem>
               <DropdownMenuItem onClick={handlePrint} className="rounded-lg cursor-pointer text-muted-foreground py-2 border-t border-white/5 mt-1">
                 <Printer className="mr-2 h-4 w-4" /> Print / Save PDF (Dialog)
@@ -434,7 +538,8 @@ export default function Sales() {
                 <Table className="w-full">
                 <TableHeader className="bg-foreground/5 pointer-events-none">
                   <TableRow className="border-border/50 hover:bg-transparent">
-                    <TableHead className="font-semibold px-6 py-4">Vehicle</TableHead>
+                    <TableHead className="font-semibold px-6 py-4">Sale #</TableHead>
+                    <TableHead className="font-semibold">Vehicle</TableHead>
                     <TableHead className="font-semibold">Customer</TableHead>
                     <TableHead className="font-semibold">Sale Price</TableHead>
                     <TableHead className="font-semibold">Sale Date</TableHead>
@@ -445,6 +550,9 @@ export default function Sales() {
                   {paged.map((s) => (
                     <TableRow key={s.id} className="border-border/10 hover:bg-white/5 transition-colors group">
                       <TableCell className="px-6 py-4">
+                        <span className="font-mono text-xs font-bold text-violet-500 bg-violet-500/5 px-2 py-1 rounded">#{(s as any).sale_number || s.id.slice(0, 4)}</span>
+                      </TableCell>
+                      <TableCell>
                          <div className="flex items-center gap-2">
                             <Car className="h-4 w-4 text-muted-foreground" />
                             <span className="font-semibold text-sm transition-colors group-hover:text-violet-500">{vehicleMap[s.vehicle_id] || "—"}</span>
@@ -554,15 +662,107 @@ export default function Sales() {
           </div>
           <div className="p-6 space-y-5">
             <div className="space-y-2">
-              <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customer *</Label>
-              <Select value={form.customer_id} onValueChange={(v) => setForm({ ...form, customer_id: v })}>
-                <SelectTrigger className="rounded-xl h-11 bg-background/50 border-white/10 focus-visible:ring-violet-500"><SelectValue placeholder="Select customer" /></SelectTrigger>
-                <SelectContent className="glass-panel rounded-xl">
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id} className="rounded-lg">{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Customer *</Label>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  className={cn("h-7 px-2 text-[10px] uppercase font-bold", isNewCustomer ? "text-amber-500 bg-amber-500/10" : "text-violet-500")}
+                  onClick={() => setIsNewCustomer(!isNewCustomer)}
+                >
+                  <UserPlus className="w-3 h-3 mr-1" />
+                  {isNewCustomer ? "Select Existing" : "Add New Customer"}
+                </Button>
+              </div>
+
+              {!isNewCustomer ? (
+                <Popover open={customerSearchOpen} onOpenChange={setCustomerSearchOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={customerSearchOpen}
+                      className="w-full justify-between rounded-xl h-11 bg-background/50 border-white/10 font-normal hover:bg-background/80"
+                    >
+                      {form.customer_id
+                        ? customers.find((c) => c.id === form.customer_id)?.name
+                        : "Select customer..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0 glass-panel border-white/10">
+                    <Command className="bg-transparent">
+                      <CommandInput placeholder="Search customers..." className="h-9" />
+                      <CommandList>
+                        <CommandEmpty>No customer found.</CommandEmpty>
+                        <CommandGroup>
+                          {customers.map((c) => (
+                            <CommandItem
+                              key={c.id}
+                              value={c.name}
+                              onSelect={() => {
+                                setForm({ ...form, customer_id: c.id });
+                                setCustomerSearchOpen(false);
+                              }}
+                              className="rounded-lg cursor-pointer"
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  form.customer_id === c.id ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              <div className="flex flex-col">
+                                <span className="font-medium">{c.name}</span>
+                                <span className="text-[10px] text-muted-foreground">{c.phone || "No phone"}</span>
+                              </div>
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 bg-amber-500/5 border border-amber-500/20 rounded-2xl animate-fade-in">
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Full Name *</Label>
+                    <Input 
+                      placeholder="Customer Name" 
+                      className="h-9 rounded-lg bg-background/50 border-white/10" 
+                      value={newCustomer.name}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Phone Number</Label>
+                    <Input 
+                      placeholder="080..." 
+                      className="h-9 rounded-lg bg-background/50 border-white/10" 
+                      value={newCustomer.phone}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, phone: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Email Address</Label>
+                    <Input 
+                      placeholder="customer@example.com" 
+                      className="h-9 rounded-lg bg-background/50 border-white/10" 
+                      value={newCustomer.email}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, email: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase font-bold text-muted-foreground">Address</Label>
+                    <Input 
+                      placeholder="Home or Office address" 
+                      className="h-9 rounded-lg bg-background/50 border-white/10" 
+                      value={newCustomer.address}
+                      onChange={(e) => setNewCustomer({ ...newCustomer, address: e.target.value })}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -679,7 +879,11 @@ export default function Sales() {
           </div>
           <div className="p-6 border-t border-white/5 bg-foreground/5 flex justify-end gap-3">
             <Button variant="outline" onClick={closeDialog} className="rounded-xl border-white/10 hover:bg-white/5">Cancel</Button>
-            <Button onClick={() => upsertMutation.mutate()} disabled={!canSubmit} className="rounded-xl bg-violet-500 hover:bg-violet-600 text-white border-0 shadow-lg shadow-violet-500/20">
+            <Button 
+              onClick={() => upsertMutation.mutate()} 
+              disabled={!( (form.customer_id || (isNewCustomer && newCustomer.name)) && form.selected_vehicle_ids.length > 0 && form.sale_price && !upsertMutation.isPending )} 
+              className="rounded-xl bg-violet-500 hover:bg-violet-600 text-white border-0 shadow-lg shadow-violet-500/20"
+            >
               {editId ? "Update Sale" : "Record Sale"}
             </Button>
           </div>
@@ -709,6 +913,103 @@ export default function Sales() {
         type="sale" 
         id={qrId} 
       />
+
+      {/* Advanced Export Dialog */}
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="max-w-md rounded-3xl glass-panel shadow-2xl border-white/10 p-0 bg-background/95 backdrop-blur-3xl">
+          <div className="p-6 border-b border-white/5 bg-emerald-500/5">
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold flex items-center gap-2">
+                <Download className="h-5 w-5 text-emerald-500" /> Advanced Export
+              </DialogTitle>
+              <p className="text-sm text-muted-foreground mt-1">Export multiple sales based on a specific date range.</p>
+            </DialogHeader>
+          </div>
+          <div className="p-6 space-y-6">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Start Date</Label>
+                <Input 
+                  type="date" 
+                  className="rounded-xl h-11 bg-background/50 border-white/10" 
+                  value={exportDates.start}
+                  onChange={(e) => setExportDates({ ...exportDates, start: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">End Date</Label>
+                <Input 
+                  type="date" 
+                  className="rounded-xl h-11 bg-background/50 border-white/10" 
+                  value={exportDates.end}
+                  onChange={(e) => setExportDates({ ...exportDates, end: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-3">
+               <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Export Mode</Label>
+               <div className="grid grid-cols-2 gap-3">
+                  <div 
+                    onClick={() => setExportMode("summary")}
+                    className={cn(
+                      "p-4 rounded-2xl border cursor-pointer transition-all flex flex-col gap-2",
+                      exportMode === "summary" ? "bg-violet-500/10 border-violet-500/50" : "bg-background/40 border-white/5 hover:bg-white/5"
+                    )}
+                  >
+                    <FileText className={cn("h-5 w-5", exportMode === "summary" ? "text-violet-500" : "text-muted-foreground")} />
+                    <div>
+                      <p className="font-bold text-sm">Summary PDF</p>
+                      <p className="text-[10px] text-muted-foreground">Single table listing all sales.</p>
+                    </div>
+                  </div>
+                  <div 
+                    onClick={() => setExportMode("individual")}
+                    className={cn(
+                      "p-4 rounded-2xl border cursor-pointer transition-all flex flex-col gap-2",
+                      exportMode === "individual" ? "bg-emerald-500/10 border-emerald-500/50" : "bg-background/40 border-white/5 hover:bg-white/5"
+                    )}
+                  >
+                    <Download className={cn("h-5 w-5", exportMode === "individual" ? "text-emerald-500" : "text-muted-foreground")} />
+                    <div>
+                      <p className="font-bold text-sm">Individual Docs</p>
+                      <p className="text-[10px] text-muted-foreground">Separate PDF for every sale.</p>
+                    </div>
+                  </div>
+               </div>
+            </div>
+
+            {exportMode === "individual" && (
+              <div className="p-4 rounded-2xl bg-amber-500/5 border border-amber-500/10 flex items-start gap-3">
+                <AlertCircle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-500 leading-relaxed">
+                  Exporting individual documents for many sales may take time. Your browser will prompt you to allow multiple downloads.
+                </p>
+              </div>
+            )}
+          </div>
+          <div className="p-6 border-t border-white/5 bg-foreground/5 flex justify-end gap-3">
+             <Button variant="outline" onClick={() => setExportDialogOpen(false)} className="rounded-xl border-white/10">Cancel</Button>
+             <Button 
+                onClick={handleBulkExport} 
+                className="rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-500/20 px-6"
+                disabled={isExporting}
+             >
+               {isExporting ? "Processing..." : "Export Sales"}
+             </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {isExporting && (
+        <div className="fixed inset-0 z-[100] bg-background/80 backdrop-blur-sm flex items-center justify-center p-6 text-center">
+           <div className="glass-panel p-10 rounded-3xl border-white/10 shadow-2xl max-w-sm space-y-4">
+              <div className="w-16 h-16 border-4 border-violet-500 border-t-transparent rounded-full animate-spin mx-auto" />
+              <h2 className="text-2xl font-bold">Exporting Sales...</h2>
+              <p className="text-muted-foreground">Generating and downloading your documents. Please do not close this window.</p>
+           </div>
+        </div>
+      )}
     </div>
   </>
 );

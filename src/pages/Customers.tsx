@@ -101,7 +101,10 @@ export default function Customers() {
       queryClient.invalidateQueries({ queryKey: ["customers"] });
       toast.success("Customer deleted");
     },
-    onError: () => toast.error("Failed to delete customer"),
+    onError: (error: any) => {
+      console.error("Delete error:", error);
+      toast.error(error.message || "Failed to delete customer");
+    },
   });
 
   const closeDialog = () => { setDialogOpen(false); setEditId(null); setForm(emptyForm); };

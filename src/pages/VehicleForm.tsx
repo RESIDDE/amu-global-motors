@@ -30,6 +30,7 @@ interface FormData {
   make: string;
   model: string;
   year: string;
+  trim: string;
   vin: string;
   color: string;
   price: string;
@@ -50,6 +51,7 @@ const emptyForm: FormData = {
   make: "",
   model: "",
   year: new Date().getFullYear().toString(),
+  trim: "",
   vin: "",
   color: "",
   price: "0",
@@ -123,6 +125,7 @@ export default function VehicleForm() {
         make: v.make || "",
         model: v.model || "",
         year: v.year?.toString() || "",
+        trim: v.trim || "",
         vin: v.vin || "",
         color: v.color || "",
         price: v.price?.toString() || "0",
@@ -204,7 +207,8 @@ export default function VehicleForm() {
         make: form.make.trim(),
         model: form.model.trim(),
         year: parseInt(form.year),
-        vin: form.vin.trim() || null,
+        trim: form.trim.trim() || null,
+        vin: form.vin.trim().toUpperCase() || null,
         color: form.color.trim() || null,
         price: parseFloat(form.price) || 0,
         cost_price: parseFloat(form.cost_price) || 0,
@@ -324,7 +328,18 @@ export default function VehicleForm() {
               errors={{ make: errors.make, model: errors.model, year: errors.year }}
               required={{ make: true, model: true, year: true }}
             />
-            {field("vin", "Chassis Number (VIN)")}
+            {field("trim", "Trim / Variant (e.g. LX 600)")}
+            <div className="space-y-1">
+              <Label htmlFor="vin">Chassis Number (VIN)</Label>
+              <Input
+                id="vin"
+                value={form.vin}
+                onChange={(e) => setForm({ ...form, vin: e.target.value.toUpperCase() })}
+                className="font-mono uppercase"
+                placeholder="e.g. JN1AZ4EH4FM550000"
+              />
+              {errors.vin && <p className="text-sm text-destructive">{errors.vin}</p>}
+            </div>
             {field("color", "Color")}
             {field("mileage", "Mileage", "number")}
 

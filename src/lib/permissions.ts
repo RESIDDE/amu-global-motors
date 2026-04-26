@@ -11,7 +11,8 @@ export type PageKey =
   | "inquiries"
   | "inspections"
   | "authority-to-sell"
-  | "meetings";
+  | "meetings"
+  | "repairs";
 
 export const ALL_PAGES: { key: PageKey; label: string; path: string }[] = [
   { key: "dashboard",        label: "Dashboard",         path: "/dashboard" },
@@ -23,6 +24,7 @@ export const ALL_PAGES: { key: PageKey; label: string; path: string }[] = [
   { key: "inspections",      label: "Inspections",       path: "/inspections" },
   { key: "authority-to-sell", label: "Auth. Form",       path: "/authority-to-sell" },
   { key: "meetings",          label: "Meetings",        path: "/meetings" },
+  { key: "repairs",           label: "Repairs",         path: "/repairs" },
 ];
 
 // super_admin can always see everything — not configurable
@@ -30,8 +32,8 @@ export const SUPER_ADMIN_PAGES: PageKey[] = ALL_PAGES.map((p) => p.key);
 
 export const DEFAULT_PERMISSIONS: PermissionsMap = {
   admin:    { view: ALL_PAGES.map((p) => p.key), edit: ALL_PAGES.map((p) => p.key) },
-  sales:    { view: ["dashboard", "vehicles", "customers", "sales", "invoices", "inquiries", "meetings"], edit: ["vehicles", "customers", "sales", "invoices", "inquiries"] },
-  mechanic: { view: ["dashboard", "vehicles", "inspections"], edit: ["vehicles", "inspections"] },
+  sales:    { view: ["dashboard", "vehicles", "customers", "sales", "invoices", "inquiries", "meetings", "repairs"], edit: ["vehicles", "customers", "sales", "invoices", "inquiries", "repairs"] },
+  mechanic: { view: ["dashboard", "vehicles", "inspections", "repairs"], edit: ["vehicles", "inspections", "repairs"] },
 };
 
 // ─── localStorage persistence ────────────────────────────────────────────────

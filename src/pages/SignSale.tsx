@@ -116,7 +116,7 @@ export default function SignSale() {
           <CardHeader className="bg-foreground/5 border-b border-white/5 p-6">
              <CardTitle className="text-lg font-bold flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-violet-500" />
-                Agreement Summary
+                Agreement Summary {(sale as any).sale_number && <span className="text-xs font-mono bg-violet-500/10 px-2 py-0.5 rounded-full ml-auto">#{(sale as any).sale_number}</span>}
              </CardTitle>
           </CardHeader>
           <CardContent className="p-0">

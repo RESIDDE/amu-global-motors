@@ -93,7 +93,7 @@ function AppRoutes() {
               <Route path="/invoices"          element={<RoleGuard page="invoices"><Invoices /></RoleGuard>} />
               <Route path="/inquiries"         element={<RoleGuard page="inquiries"><Inquiries /></RoleGuard>} />
               <Route path="/inspections"       element={<RoleGuard page="inspections"><Inspections /></RoleGuard>} />
-              <Route path="/repairs"           element={<RoleGuard page="repairs"><RepairsMaintenance /></RoleGuard>} />
+              <Route path="/repairs"           element={<RoleGuard page={"repairs" as any}><RepairsMaintenance /></RoleGuard>} />
               <Route path="/authority-to-sell" element={<RoleGuard page="authority-to-sell"><AuthorityToSell /></RoleGuard>} />
               <Route path="/meetings"          element={<RoleGuard page="meetings"><Meetings /></RoleGuard>} />
               {/* Settings — only super_admin can see; RoleGuard handled internally */}

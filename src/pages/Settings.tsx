@@ -16,7 +16,7 @@ import { toast } from "sonner";
 import {
   Shield, ShieldAlert, ShieldCheck, User, Users, Settings2,
   ToggleLeft, Eye, Pencil, RotateCcw, Crown, Lock, Activity,
-  UserPlus, ArrowRightLeft, AlertTriangle, CheckCircle2,
+  UserPlus, ArrowRightLeft, AlertTriangle, CheckCircle2, Trash2,
 } from "lucide-react";
 import {
   ALL_PAGES, getPermissions, savePermissions, resetPermissions,
@@ -24,7 +24,7 @@ import {
 } from "@/lib/permissions";
 import { logAction, describeLog } from "@/lib/logger";
 
-type Tab = "team" | "permissions" | "audit";
+type Tab = "team" | "permissions" | "audit" | "system";
 
 const ROLE_CONFIG: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
   super_admin: { label: "Super Admin", color: "text-amber-400",   icon: <Crown className="w-3.5 h-3.5" /> },
@@ -92,10 +92,17 @@ export default function Settings() {
       ]);
       if (rolesError) throw rolesError;
       if (profilesError) throw profilesError;
-      return roles.map((r: any) => ({
-        ...r,
-        profile: profiles.find((p: any) => p.id === r.user_id) || null,
-      }));
+      
+      // Map over profiles to ensure everyone is shown
+      return profiles.map((p: any) => {
+        const roleEntry = roles.find((r: any) => r.user_id === p.id);
+        return {
+          id: roleEntry?.id || `temp-${p.id}`,
+          user_id: p.id,
+          role: roleEntry?.role || "mechanic",
+          profile: p,
+        };
+      });
     },
   });
 
@@ -113,20 +120,74 @@ export default function Settings() {
     },
     enabled: role === "super_admin" && tab === "audit",
   });
+  
+  // ── App Settings Query ─────────────────────────────────────────────────────
+  const { data: appSettings = [], isLoading: isLoadingSettings } = useQuery({
+    queryKey: ["app_settings"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("app_settings")
+        .select("*");
+      if (error) throw error;
+      return data;
+    },
+    enabled: role === "super_admin",
+  });
+
+  const updateSetting = useMutation({
+    mutationFn: async ({ key, value }: { key: string; value: string }) => {
+      const { error } = await (supabase as any)
+        .from("app_settings")
+        .upsert({ key, value }, { onConflict: "key" });
+      if (error) throw error;
+      await logAction("UPDATE", "app_settings", key, { new_value: value });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["app_settings"] });
+      toast.success("Settings updated");
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
   // ── Update Role Mutation ───────────────────────────────────────────────────
   const updateRole = useMutation({
-    mutationFn: async ({ id, newRole, targetName }: { id: string; newRole: string; targetName?: string }) => {
+    mutationFn: async ({ userId, newRole, targetName }: { userId: string; newRole: string; targetName?: string }) => {
       const { error } = await (supabase as any)
-        .from("user_roles").update({ role: newRole }).eq("id", id);
+        .from("user_roles").upsert({ user_id: userId, role: newRole }, { onConflict: "user_id" });
       if (error) throw error;
-      await logAction("ROLE_CHANGE", "user_roles", id, { new_role: newRole, target_name: targetName });
+      await logAction("ROLE_CHANGE", "user_roles", userId, { new_role: newRole, target_name: targetName });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users-roles"] });
       toast.success("Role updated");
     },
     onError: (e: any) => toast.error(e.message),
+  });
+
+  // ── Delete User Mutation ────────────────────────────────────────────────────
+  const deleteUser = useMutation({
+    mutationFn: async ({ userId, name }: { userId: string; name?: string }) => {
+      if (!window.confirm(`Are you sure you want to remove ${name || 'this user'}? This action cannot be undone.`)) {
+        throw new Error("Cancelled");
+      }
+      
+      // Delete from user_roles and profiles
+      // The user likely has a trigger or function to handle auth deletion if they mentioned "doing the sql"
+      const { error: roleErr } = await (supabase as any).from("user_roles").delete().eq("user_id", userId);
+      const { error: profileErr } = await (supabase as any).from("profiles").delete().eq("id", userId);
+      
+      if (roleErr) throw roleErr;
+      if (profileErr) throw profileErr;
+      
+      await logAction("DELETE", "users", userId, { deleted_name: name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users-roles"] });
+      toast.success("User removed successfully");
+    },
+    onError: (e: any) => {
+      if (e.message !== "Cancelled") toast.error(e.message);
+    },
   });
 
   // ── Claim Super Admin ──────────────────────────────────────────────────────
@@ -288,7 +349,7 @@ export default function Settings() {
 
       {/* Tabs */}
       <div className="flex p-1.5 bg-foreground/5 rounded-2xl gap-1 max-w-md overflow-x-auto">
-        {([["team", "Team", <Users className="w-4 h-4 shrink-0" />], ["permissions", "Permissions", <Shield className="w-4 h-4 shrink-0" />], ["audit", "Audit Logs", <Activity className="w-4 h-4 shrink-0" />]] as const).map(([key, label, icon]) => (
+        {([["team", "Team", <Users className="w-4 h-4 shrink-0" />], ["permissions", "Permissions", <Shield className="w-4 h-4 shrink-0" />], ["audit", "Audit Logs", <Activity className="w-4 h-4 shrink-0" />], ["system", "System", <Settings2 className="w-4 h-4 shrink-0" />]] as const).map(([key, label, icon]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -347,25 +408,40 @@ export default function Settings() {
                       </div>
                     </div>
 
-                    <Select
-                      value={u.role}
-                      onValueChange={(val) => {
-                        if (isSelf && val !== "super_admin") {
-                          if (!window.confirm("⚠️ Warning: Removing your own Super Admin role will lock you out of this page. Proceed?")) return;
-                        }
-                        updateRole.mutate({ id: u.id, newRole: val, targetName: profile?.display_name });
-                      }}
-                      disabled={updateRole.isPending}
-                    >
-                      <SelectTrigger className="w-[160px] rounded-xl bg-background/50 border-white/10 h-10 font-semibold">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="glass-panel font-medium rounded-xl">
-                        <SelectItem value="super_admin" className="rounded-lg font-bold text-amber-400">⭐ Super Admin</SelectItem>
-                        <SelectItem value="admin" className="rounded-lg font-bold text-emerald-500">Admin</SelectItem>
-                        <SelectItem value="sales" className="rounded-lg text-blue-400">Sales</SelectItem>
-                      </SelectContent>
-                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Select
+                        value={u.role}
+                        onValueChange={(val) => {
+                          if (isSelf && val !== "super_admin") {
+                            if (!window.confirm("⚠️ Warning: Removing your own Super Admin role will lock you out of this page. Proceed?")) return;
+                          }
+                          updateRole.mutate({ userId: u.user_id, newRole: val, targetName: profile?.display_name });
+                        }}
+                        disabled={updateRole.isPending}
+                      >
+                        <SelectTrigger className="w-[160px] rounded-xl bg-background/50 border-white/10 h-10 font-semibold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="glass-panel font-medium rounded-xl">
+                          <SelectItem value="super_admin" className="rounded-lg font-bold text-amber-400">⭐ Super Admin</SelectItem>
+                          <SelectItem value="admin" className="rounded-lg font-bold text-emerald-500">Admin</SelectItem>
+                          <SelectItem value="sales" className="rounded-lg text-blue-400">Sales</SelectItem>
+                          <SelectItem value="mechanic" className="rounded-lg text-violet-400">Mechanic</SelectItem>
+                        </SelectContent>
+                      </Select>
+
+                      {!isSelf && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl h-10 w-10 text-rose-500 hover:bg-rose-500/10 hover:text-rose-600"
+                          onClick={() => deleteUser.mutate({ userId: u.user_id, name: profile?.display_name })}
+                          disabled={deleteUser.isPending}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      )}
+                    </div>
                   </div>
                 );
               })}
@@ -505,6 +581,53 @@ export default function Settings() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── SYSTEM TAB ── */}
+      {tab === "system" && (
+        <div className="glass-panel p-6 sm:p-8 rounded-3xl border border-white/5 relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-[80px] pointer-events-none" />
+          <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+            <Settings2 className="h-5 w-5 text-emerald-500" /> System Configuration
+          </h2>
+          <p className="text-sm text-muted-foreground mb-8">
+            Manage global application behaviors and sequential numbering.
+          </p>
+
+          <div className="grid gap-8 max-w-2xl">
+            {/* Sale Numbering */}
+            <div className="space-y-4 p-6 rounded-2xl bg-white/5 border border-white/5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="space-y-1">
+                  <h3 className="font-bold text-foreground">Sale Numbering</h3>
+                  <p className="text-xs text-muted-foreground">Customize the sequence for new sales. Numbers are automatically padded (e.g., 001, 002).</p>
+                </div>
+                <div className="bg-emerald-500/10 text-emerald-500 p-2 rounded-xl">
+                  <ShieldCheck className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="space-y-3 pt-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="nextSaleNumber" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Next Sale Number</Label>
+                  <div className="flex gap-2">
+                    <Input 
+                      id="nextSaleNumber"
+                      type="number"
+                      className="rounded-xl h-11 bg-background/50 border-white/10 w-32 font-mono text-lg"
+                      value={appSettings.find((s: any) => s.key === 'next_sale_number')?.value || ''}
+                      onChange={(e) => updateSetting.mutate({ key: 'next_sale_number', value: e.target.value })}
+                    />
+                    <div className="flex flex-col justify-center">
+                      <p className="text-sm font-medium text-emerald-500">Current Sequence</p>
+                      <p className="text-xs text-muted-foreground">Next sale will be: <span className="font-mono bg-white/10 px-1 rounded">#{String(appSettings.find((s: any) => s.key === 'next_sale_number')?.value || '1').padStart(3, '0')}</span></p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
