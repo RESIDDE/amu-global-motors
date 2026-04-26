@@ -58,7 +58,7 @@ const emptyForm: FormData = {
   cost_price: "0",
   mileage: "0",
   fuel_type: "Petrol",
-  transmission: "Manual",
+  transmission: "Automatic",
   status: "Available",
   description: "",
   date_arrived: "",
@@ -330,13 +330,19 @@ export default function VehicleForm() {
             />
             {field("trim", "Trim / Variant (e.g. LX 600)")}
             <div className="space-y-1">
-              <Label htmlFor="vin">Chassis Number (VIN)</Label>
+              <div className="flex justify-between items-center">
+                <Label htmlFor="vin">Chassis Number (VIN)</Label>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-colors ${form.vin.length === 17 ? 'bg-emerald-500 text-white' : 'bg-violet-500/10 text-violet-500'}`}>
+                  {form.vin.length} / 17
+                </span>
+              </div>
               <Input
                 id="vin"
                 value={form.vin}
                 onChange={(e) => setForm({ ...form, vin: e.target.value.toUpperCase() })}
-                className="font-mono uppercase"
+                className={`font-mono uppercase transition-all ${form.vin.length === 17 ? 'border-emerald-500 ring-emerald-500/20' : ''}`}
                 placeholder="e.g. JN1AZ4EH4FM550000"
+                maxLength={17}
               />
               {errors.vin && <p className="text-sm text-destructive">{errors.vin}</p>}
             </div>
